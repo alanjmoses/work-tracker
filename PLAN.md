@@ -14,6 +14,7 @@ A single `index.html` file with embedded CSS and JS. No backend. Data persists i
   "name": "string (required)",
   "tags": ["string"],
   "status": "in_progress | done | on_hold",
+  "pm": "string | null",
   "blocks": [ { "id": "uuid", "start": "YYYY-MM-DD", "end": "YYYY-MM-DD" } ],
   "dayNotes": { "YYYY-MM-DD": "what I did that day" },
   "notes": "string | null",
@@ -85,7 +86,6 @@ No external dependencies. Pure HTML, CSS, JS.
   - **Inline "What did I do today?" field** — writes straight to `dayNotes[today]` on blur (quick logging, no modal)
   - Quick actions: Edit / Mark as Done
 - Empty state if nothing is in progress
-- Floating `+ Add Feature` button (always visible)
 
 ---
 
@@ -102,7 +102,7 @@ No external dependencies. Pure HTML, CSS, JS.
   - Feature name + tags
   - Status badge
   - Date range: first block start → last block end
-  - **Days worked** (distinct days across blocks) + count of daily notes
+  - **Days worked** (distinct days across blocks) + count of daily notes + PM when set
   - Compact status-coloured bar showing each block as a segment
   - Expand to see the **Daily Log** (all per-day notes, chronological) + general notes
   - Edit / Delete actions
@@ -115,13 +115,18 @@ No external dependencies. Pure HTML, CSS, JS.
 
 **Contents:**
 - Month/quarter toggle at the top (default: current month)
-- Left column: feature names (with tag chips)
+- Left column: each row stacks three blocks: (1) brand badges on their own line, (2) feature name (wraps to multiple lines if long), (3) a single subtitle line `Nd worked | PM: <name>` (PM segment omitted when not set). Tags are collapsed to small **brand badges** (one Jiraaf or altGraaf SVG per unique brand) plus a `+N` badge for any custom tags. Hovering (or keyboard-focusing) the badge cluster reveals a popover with the full chip list. Today / Log views still show full chips.
+- Features with status `done` sort to the **bottom** of the row order so active and on-hold work is closer to the top of the view.
+- **Add Feature affordance:** a thin row at the bottom of the gantt table that's transparent at rest and reveals a `+ Add feature` bar on hover. Click it to open the Add Feature modal. (Replaces the old floating + button — Today/Log views no longer have an inline add affordance; switch to Timeline to add.)
 - Right: horizontal canvas (div grid, fixed **96px/day**) — each feature gets one row
+  - Day headers show **weekday abbrev + day number** stacked ("Mon" / "1").
   - **One bar per work block**, coloured by status. A feature can show several blocks with gaps. Bars are tall (~64px) to fit inline note text.
-  - **Direct editing (FigJam-style):** click an empty day to drop a 1-day block · drag a block's edges to resize · drag its body to move · hover + **×** to delete (with confirm + undo) · click a block to log that day's note.
+  - **Direct editing (FigJam-style):** click an empty day to drop a 1-day block · **click-and-drag across cells to create a multi-day block** (the modal opens with the range pre-filled, save commits it) · drag a block's edges to resize · drag its body to move · click a block to log/view that day's note. To remove a block, click it and pick **Delete** in the Day modal (confirm + undo).
   - **Weekends are shown as shaded columns.** A block dragged across a weekend splits (Thu–Fri + Mon–Tue) so the weekend isn't counted — but clicking a weekend cell logs work for that day (a standalone weekend block that is kept and counted).
   - Today column highlighted.
   - **Day notes render inline inside the bar.** A note "owns" all subsequent days within the same block until the next note (or the block end). Long notes are clamped to 3 lines with full text on hover. Notes don't carry across separate blocks — each block starts blank. (Replaces the old "note dot" indicator.)
+- A small **info (i) button** near the filter/toggle opens a popover with the "how this works" hint (replaces the always-visible help line).
+- The **gantt area has its own scroll container** (max-height ≈ viewport − 200px). The month + day-header rows stick to the top while scrolling vertically; the feature-name column stays sticky on the left during horizontal scroll.
 - Navigation: previous / next period arrows
 - Filter: by tag (to reduce noise)
 - Bar colour by status: In Progress — purple · Done — green · On Hold — amber
@@ -133,6 +138,7 @@ No external dependencies. Pure HTML, CSS, JS.
 
 **Fields:**
 - Name (text input, required)
+- Product Manager (text input, optional — free text, surfaces on Timeline and Log)
 - Tags (multi-select from tag list + inline "Add new tag" option)
 - Status (segmented control: In Progress / Done / On Hold)
 - Work blocks: a dynamic list of start/end rows (+ Add block / remove). Same blocks you can draw on the Timeline.
@@ -140,7 +146,7 @@ No external dependencies. Pure HTML, CSS, JS.
 - Actions: Save / Cancel / Delete (on edit only)
 
 A **Day modal** opens from the Timeline whenever you click a day (cell or block). It has a **Working / Holiday** toggle:
-- **Working** (default): a "what did you do?" log box. Saving stores the note and ensures a work block exists on that day.
+- **Working** (default): a "what did you do?" log box. Saving stores the note and ensures a work block exists on that day. If the clicked day is inside an existing block, a **Delete** button removes the entire block (notes kept) — replacing the old hover-× on the bar.
 - **Holiday**: a reason field + a From/To range. Saving marks every weekday in the range as a global holiday and re-splits all features' blocks around the new holidays. Deletes go through confirm + undo toast like everything else.
 
 **Validation:**
@@ -152,6 +158,7 @@ A **Day modal** opens from the Timeline whenever you click a day (cell or block)
 ## Interactions & UX Details
 
 - **Navigation:** Clicking nav items swaps visible view, no page reload
+- **Modals:** centered on the viewport, capped at `max-height: 85vh` with internal scroll if content overflows. Press **Esc** to close any open modal (also closes the Timeline info popover).
 - **Modal:** Opens over current view, closes on Save / Cancel / outside click
 - **Inline editing:** Clicking a feature name anywhere opens the edit modal
 - **Mark as Done:** Quick action on Today cards — sets status to `done`, sets end date of last open stage to today if not already set
@@ -212,6 +219,47 @@ Full historical data seeded from **October 2025 → June 2026** based on Alan's 
 - **7 new features** for stickies that had no matching feature: Create Tab view for Sell, Location required messaging, App API Loading error states, APD Interviews (hiring), Internal Presentation, Automating Internal Presentation Design, Bond Baskets.
 - **10 high-confidence holidays** (public holidays + clearly-marked single days off). Ambiguous light-grey stretches were left out — Alan marks those via the Day modal's Holiday tab.
 Notes were transcribed from screenshots (best-effort); a few tiny sub-labels may need correction in-app.
+
+## PM per Feature (from FigJam workstreams)
+
+Each feature's PM, inferred from the workstream it sat under in the FigJam roadmap. PMs: Ganesh, Pranchal, Vaishali, Rishu. **Wired into the data model** as `feature.pm` (string | null); `backfillPMsOnce()` (flag `wt_pm_backfill_v1`) seeds this list onto existing features by name on first load. Editable from the Add/Edit Feature modal.
+
+| Feature | PM |
+|---|---|
+| Jiraaf App FD Details | Ganesh |
+| Jiraaf Web FD Listing | Ganesh |
+| altGraaf FD Listing & Details | Ganesh |
+| Bond Analyser Revamp | Ganesh |
+| RA Insights | Ganesh |
+| RA Insights Details Page | Ganesh |
+| Opportunity Details Redesign | Ganesh |
+| Unit Selection Improvements | Pranchal |
+| Pending Orders | Pranchal |
+| IFA Investment Activity | — (not labelled — Jan, Workstream 2) |
+| KYC Flow — DOB Addition | — (not labelled — Jan, Workstream 2) |
+| Header Revamp | Ganesh |
+| Form 15G/H — Multiple Issuer Email | Pranchal |
+| Profile Edit — Mobile & Email | Ganesh |
+| HUF KYC Flow | Ganesh |
+| Income Certificate | Pranchal |
+| Form 121 | Pranchal |
+| Figma File Restructuring | — (Improving workflow — no PM) |
+| FTI Homepage Redesign | Vaishali |
+| Disbursal Flow Admin | Ganesh |
+| Design System Structuring | — (Improving workflow — no PM) |
+| Trust Markers Phase 1 | Vaishali |
+| Trust Markers Phase 2 | Vaishali |
+| Accessibility Audit | Vaishali |
+| Audit Requirements — FATCA | Rishu |
+| KYC Not-Done Users Homepage | Vaishali |
+| Opportunity Details Redesign v2 | Ganesh |
+| Create Tab view for Sell | Ganesh |
+| Location required messaging | Pranchal |
+| App API Loading error states | Pranchal |
+| APD Interviews (hiring) | — (hiring, N/A) |
+| Internal Presentation | — (internal) |
+| Automating Internal Presentation Design | — (internal) |
+| Bond Baskets | Ganesh |
 
 ## Out of Scope (this MVP)
 

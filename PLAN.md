@@ -47,6 +47,8 @@ Default seed list:
 
 User can add custom tags at any time (e.g. `Design System`, `KYC`, `RA Insights`).
 
+**Chip rendering:** wherever a tag is shown as a chip (Today cards, Log items, Timeline row labels, Modal tag picker), the brand prefix `Jiraaf`/`altGraaf` is replaced by the corresponding SVG from `Assets/Icons/` (`Jiraaf_Symbol.svg`, `altGraaf_Symbol.svg`). The platform suffix stays as text. Custom tags render as plain text. Stored tag strings are unchanged — only the rendering swaps in the icon. Native `<select>` dropdowns (log filter, timeline filter) keep showing the full text string since `<option>` can't render SVGs.
+
 ### Status (drives bar colour)
 `in_progress` (purple) · `done` (green) · `on_hold` (amber)
 
@@ -114,12 +116,12 @@ No external dependencies. Pure HTML, CSS, JS.
 **Contents:**
 - Month/quarter toggle at the top (default: current month)
 - Left column: feature names (with tag chips)
-- Right: horizontal canvas (div grid, fixed 34px/day) — each feature gets one row
-  - **One bar per work block**, coloured by status. A feature can show several blocks with gaps.
+- Right: horizontal canvas (div grid, fixed **96px/day**) — each feature gets one row
+  - **One bar per work block**, coloured by status. A feature can show several blocks with gaps. Bars are tall (~64px) to fit inline note text.
   - **Direct editing (FigJam-style):** click an empty day to drop a 1-day block · drag a block's edges to resize · drag its body to move · hover + **×** to delete (with confirm + undo) · click a block to log that day's note.
   - **Weekends are shown as shaded columns.** A block dragged across a weekend splits (Thu–Fri + Mon–Tue) so the weekend isn't counted — but clicking a weekend cell logs work for that day (a standalone weekend block that is kept and counted).
   - Today column highlighted.
-  - Days with a note show a dot in that cell.
+  - **Day notes render inline inside the bar.** A note "owns" all subsequent days within the same block until the next note (or the block end). Long notes are clamped to 3 lines with full text on hover. Notes don't carry across separate blocks — each block starts blank. (Replaces the old "note dot" indicator.)
 - Navigation: previous / next period arrows
 - Filter: by tag (to reduce noise)
 - Bar colour by status: In Progress — purple · Done — green · On Hold — amber

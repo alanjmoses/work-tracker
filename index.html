@@ -57,7 +57,9 @@
   .card-name { font-size: 15px; font-weight: 700; margin-bottom: 10px; cursor: pointer; line-height: 1.4; color: var(--text); }
   .card-name:hover { color: var(--accent); }
   .tags-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
-  .tag { font-size: 11px; font-weight: 500; padding: 3px 9px; border-radius: 20px; background: var(--surface2); color: var(--text-muted); border: 1px solid var(--border); }
+  .tag { font-size: 11px; font-weight: 500; padding: 3px 9px; border-radius: 20px; background: var(--surface2); color: var(--text-muted); border: 1px solid var(--border); display: inline-flex; align-items: center; gap: 4px; }
+  .tag-icon { height: 12px; width: 12px; flex-shrink: 0; display: inline-block; }
+  .tag-option .tag-icon { height: 13px; width: 13px; }
 
   .stage-info { background: var(--surface2); border-radius: 10px; padding: 12px 14px; margin-bottom: 12px; border: 1px solid var(--border-light); }
   .stage-meta { font-size: 12px; color: var(--text-muted); }
@@ -146,6 +148,7 @@
   .gantt-grid { min-width: 100%; }
   .g-row { display: flex; border-bottom: 1px solid var(--border-light); }
   .g-row:last-child { border-bottom: none; }
+  .g-feature-row { min-height: 80px; }
   .g-name { width: 200px; min-width: 200px; padding: 9px 14px; border-right: 1px solid var(--border); position: sticky; left: 0; background: var(--surface); z-index: 5; display: flex; flex-direction: column; justify-content: center; }
   .g-name .feat-name { font-weight: 700; font-size: 13px; line-height: 1.35; cursor: pointer; }
   .g-name .feat-name:hover { color: var(--accent); }
@@ -157,7 +160,6 @@
   .g-daycell.today { background: rgba(123,97,255,0.10); }
   .g-daycell.weekend { background: var(--weekend); }
   .g-daycell.holiday { background: var(--holiday); }
-  .g-note-dot { position: absolute; bottom: 5px; left: 50%; transform: translateX(-50%); width: 6px; height: 6px; border-radius: 50%; background: var(--text); box-shadow: 0 0 0 2px var(--surface); pointer-events: none; }
 
   .g-header-month .g-name, .g-header-day .g-name { background: var(--surface2); }
   .g-header-month { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border); }
@@ -168,12 +170,14 @@
   .g-dayhdr.weekend { color: #B5651D; background: var(--weekend); }
   .g-dayhdr.holiday { color: var(--amber); background: var(--holiday); }
 
-  .g-block { position: absolute; height: 24px; top: 16px; border-radius: 5px; color: #fff; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; overflow: hidden; white-space: nowrap; cursor: grab; z-index: 2; user-select: none; opacity: 0.93; box-shadow: 0 1px 3px rgba(0,0,0,0.15); }
+  .g-block { position: absolute; height: 64px; top: 8px; border-radius: 6px; color: #fff; cursor: grab; z-index: 2; user-select: none; opacity: 0.93; box-shadow: 0 1px 3px rgba(0,0,0,0.15); overflow: hidden; }
   .g-block:hover { opacity: 1; }
   .g-block:active { cursor: grabbing; }
+  .g-block-seg { position: absolute; top: 0; bottom: 0; padding: 6px 8px; font-size: 11px; font-weight: 500; line-height: 1.3; color: #fff; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; white-space: normal; word-break: break-word; box-sizing: border-box; }
+  .g-block-seg:not(:first-child) { border-left: 1px dashed rgba(255,255,255,0.35); }
   .g-handle { position: absolute; top: 0; height: 100%; width: 8px; cursor: ew-resize; z-index: 3; }
-  .g-handle.l { left: 0; border-radius: 5px 0 0 5px; }
-  .g-handle.r { right: 0; border-radius: 0 5px 5px 0; }
+  .g-handle.l { left: 0; border-radius: 6px 0 0 6px; }
+  .g-handle.r { right: 0; border-radius: 0 6px 6px 0; }
   .g-handle:hover { background: rgba(255,255,255,0.35); }
   .g-del { position: absolute; top: -7px; right: -7px; width: 17px; height: 17px; border-radius: 50%; background: var(--red); color: #fff; font-size: 12px; line-height: 1; display: none; align-items: center; justify-content: center; cursor: pointer; z-index: 6; box-shadow: 0 1px 4px rgba(0,0,0,0.25); }
   .g-block:hover .g-del { display: flex; }
@@ -411,7 +415,7 @@ const DEFAULT_TAGS = [
   'altGraaf Web Desktop','altGraaf Web Mobile','altGraaf Mobile App'
 ];
 const STATUS_COLORS = { in_progress: '#7B61FF', done: '#1BC47D', on_hold: '#F5A623' };
-const DAY_W = 38; // px per weekday column
+const DAY_W = 96; // px per weekday column
 
 // ── DATA LAYER ──────────────────────────────────────────
 function load(key, fallback) { try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; } }
@@ -551,7 +555,7 @@ function renderToday() {
     const todayNote = (f.dayNotes && f.dayNotes[t]) ? f.dayNotes[t] : '';
     return `<div class="feature-card">
       <div class="card-name" onclick="openEdit('${f.id}')">${escapeHTML(f.name)}</div>
-      <div class="tags-row">${f.tags.map(tg=>`<span class="tag">${escapeHTML(tg)}</span>`).join('')}</div>
+      <div class="tags-row">${f.tags.map(tg=>tagChipHTML(tg)).join('')}</div>
       <div class="stage-info">
         <div class="stage-meta">Started <strong>${formatDate(start)}</strong>${start ? ` · ${daysAgo(start)} days ago` : ''} · <strong>${worked}</strong> day${worked!==1?'s':''} worked</div>
       </div>
@@ -621,7 +625,7 @@ function renderLog() {
     return `<div class="log-item" id="log-${f.id}">
       <div class="log-item-header" onclick="toggleLog('${f.id}')">
         <div class="log-item-left">
-          <div class="tags-row" style="margin-bottom:5px">${f.tags.map(t=>`<span class="tag">${escapeHTML(t)}</span>`).join('')}</div>
+          <div class="tags-row" style="margin-bottom:5px">${f.tags.map(t=>tagChipHTML(t)).join('')}</div>
           <span class="log-item-name" onclick="event.stopPropagation();openEdit('${f.id}')">${escapeHTML(f.name)}</span>
           <div class="log-item-meta">
             <span class="log-meta-item">${start ? formatDate(start) : '—'} → ${end ? formatDate(end) : '—'}</span>
@@ -720,8 +724,7 @@ function renderTimeline() {
   document.getElementById('tl-legend').innerHTML =
     Object.entries(STATUS_COLORS).map(([k,c]) => `<div class="legend-item"><span class="legend-dot" style="background:${c}"></span>${statusLabel(k)}</div>`).join('') +
     `<div class="legend-item"><span class="legend-weekend"></span>Weekend</div>` +
-    `<div class="legend-item"><span class="legend-holiday"></span>Holiday</div>` +
-    `<div class="legend-item"><span class="legend-notedot"></span>Has a daily note</div>`;
+    `<div class="legend-item"><span class="legend-holiday"></span>Holiday</div>`;
 
   const holidays = getHolidays();
   let features = getFeatures();
@@ -775,7 +778,7 @@ function renderTimeline() {
       if (isW) cls += ' weekend';
       if (hol) cls += ' holiday';
       const tip = hol ? formatDate(ds) + ' — Holiday: ' + escapeAttr(hol) : formatDate(ds) + (hasNote ? ' — ' + escapeAttr(f.dayNotes[ds]) : '');
-      return `<div class="${cls}" style="width:${DAY_W}px" onclick="openDayModal('${f.id}','${ds}')" title="${tip}">${hasNote ? '<span class="g-note-dot"></span>' : ''}</div>`;
+      return `<div class="${cls}" style="width:${DAY_W}px" onclick="openDayModal('${f.id}','${ds}')" title="${tip}"></div>`;
     }).join('');
 
     let blocks = '';
@@ -787,18 +790,37 @@ function renderTimeline() {
       const visE = Math.min(daysBetween(pStart, bEnd), tlTotalDays - 1);
       const left = visS * DAY_W, width = (visE - visS + 1) * DAY_W;
       const dayCount = daysBetween(b.start, bEnd) + 1;
+      const blockStartIdx = daysBetween(pStart, b.start); // may be negative if block starts before period
+
+      // Build note segments. A note on day i "owns" days [i, nextNoteDay-1] (or block end) inside this block.
+      const blockDays = [];
+      for (let i = 0; i < dayCount; i++) blockDays.push(addDays(b.start, i));
+      const noteIdxs = [];
+      blockDays.forEach((ds, i) => {
+        if (f.dayNotes && f.dayNotes[ds] && f.dayNotes[ds].trim()) noteIdxs.push(i);
+      });
+      let segsHtml = '';
+      for (let i = 0; i < noteIdxs.length; i++) {
+        const startI = noteIdxs[i];
+        const endI = (i + 1 < noteIdxs.length) ? noteIdxs[i+1] - 1 : blockDays.length - 1;
+        const segLeftPx = (blockStartIdx + startI - visS) * DAY_W;
+        const segWPx = (endI - startI + 1) * DAY_W;
+        const noteText = f.dayNotes[blockDays[startI]];
+        segsHtml += `<div class="g-block-seg" style="left:${segLeftPx}px;width:${segWPx}px" title="${escapeAttr(noteText)}">${escapeHTML(noteText)}</div>`;
+      }
+
       blocks += `<div class="g-block" id="blk-${b.id}" style="left:${left}px;width:${width}px;background:${STATUS_COLORS[f.status]||'#aaa'}" onmousedown="blockDown(event,'${f.id}','${b.id}')" title="${formatDate(b.start)} → ${formatDate(bEnd)} · ${dayCount} day${dayCount!==1?'s':''}">
         <div class="g-handle l" data-h="l"></div>
-        ${width > 30 ? `<span>${dayCount}d</span>` : ''}
+        ${segsHtml}
         <div class="g-handle r" data-h="r"></div>
         <div class="g-del" data-del="1" onclick="delBlock(event,'${f.id}','${b.id}')">×</div>
       </div>`;
     });
 
-    html += `<div class="g-row">
+    html += `<div class="g-row g-feature-row">
       <div class="g-name">
         <span class="feat-name" onclick="openEdit('${f.id}')">${escapeHTML(f.name)}</span>
-        <div class="tags-row">${f.tags.map(t=>`<span class="tag">${escapeHTML(t)}</span>`).join('')}</div>
+        <div class="tags-row">${f.tags.map(t=>tagChipHTML(t)).join('')}</div>
       </div>
       <div class="g-track" style="width:${trackW}px">${cells}${blocks}</div>
     </div>`;
@@ -1034,7 +1056,7 @@ document.querySelectorAll('.status-option').forEach(o => o.addEventListener('cli
 function renderTagsPicker() {
   const tags = getTags();
   document.getElementById('tags-picker').innerHTML =
-    tags.map(t=>`<span class="tag-option ${selectedTags.includes(t)?'selected':''}" onclick="toggleTag('${escapeAttr(t)}')">${escapeHTML(t)}</span>`).join('') +
+    tags.map(t=>`<span class="tag-option ${selectedTags.includes(t)?'selected':''}" onclick="toggleTag('${escapeAttr(t)}')">${tagInnerHTML(t)}</span>`).join('') +
     `<span class="tag-option add-tag" onclick="promptAddTag()">+ New tag</span>`;
 }
 function toggleTag(t) { selectedTags = selectedTags.includes(t) ? selectedTags.filter(x=>x!==t) : [...selectedTags, t]; renderTagsPicker(); }
@@ -1137,6 +1159,12 @@ document.getElementById('toast-undo').addEventListener('click', () => { if (toas
 // ── ESCAPING ─────────────────────────────────────────────
 function escapeHTML(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function escapeAttr(s) { return String(s ?? '').replace(/"/g, '&quot;').replace(/'/g, "\\'").replace(/\n/g, ' '); }
+function tagInnerHTML(t) {
+  if (t.startsWith('Jiraaf ')) return `<img class="tag-icon" src="Assets/Icons/Jiraaf_Symbol.svg" alt="Jiraaf">${escapeHTML(t.slice(7))}`;
+  if (t.startsWith('altGraaf ')) return `<img class="tag-icon" src="Assets/Icons/altGraaf_Symbol.svg" alt="altGraaf">${escapeHTML(t.slice(9))}`;
+  return escapeHTML(t);
+}
+function tagChipHTML(t) { return `<span class="tag">${tagInnerHTML(t)}</span>`; }
 
 // ── SEED DATA ────────────────────────────────────────────
 function buildSeed() {
@@ -1359,7 +1387,7 @@ migrateFeatures();
 restoreSeedOnce();
 splitWeekendsOnce();
 importFigjamOnce();
-renderToday();
+renderView();
 </script>
 </body>
 </html>

@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "work-tracker",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["serve", "-p", "3457", "/Users/Alan Moses/claude-workspace/Personal Apps/work-tracker"],
+      "port": 3457
+    }
+  ]
+}

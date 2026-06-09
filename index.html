@@ -1,0 +1,1365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Work Tracker</title>
+<style>
+  :root {
+    --bg: #F7F6F3;
+    --canvas: #EFEDE8;
+    --surface: #FFFFFF;
+    --surface2: #F2F0EB;
+    --border: #E0DAD0;
+    --border-light: #EDE8E0;
+    --text: #1E1E1E;
+    --text-muted: #888076;
+    --accent: #7B61FF;
+    --accent-light: rgba(123,97,255,0.1);
+    --green: #1BC47D;
+    --amber: #F5A623;
+    --red: #E5484D;
+    --week-divider: #D2C9BB;
+    --weekend: rgba(60,50,35,0.07);
+    --holiday: rgba(245,166,35,0.16);
+
+    --status-inprogress: #7B61FF;
+    --status-done: #1BC47D;
+    --status-onhold: #F5A623;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; min-height: 100vh; }
+
+  /* NAV */
+  nav { display: flex; align-items: center; justify-content: space-between; padding: 0 28px; height: 56px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--surface); z-index: 100; box-shadow: 0 1px 0 var(--border-light); }
+  .nav-logo { font-weight: 800; font-size: 15px; letter-spacing: -0.4px; color: var(--text); display: flex; align-items: center; gap: 8px; }
+  .nav-logo-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); display: inline-block; }
+  .nav-tabs { display: flex; gap: 2px; }
+  .nav-tab { padding: 6px 16px; border-radius: 8px; cursor: pointer; color: var(--text-muted); font-size: 13px; font-weight: 500; transition: all 0.15s; border: none; background: none; }
+  .nav-tab:hover { color: var(--text); background: var(--surface2); }
+  .nav-tab.active { color: var(--accent); background: var(--accent-light); font-weight: 600; }
+
+  .view { display: none; padding: 32px 28px; max-width: 1280px; margin: 0 auto; }
+  .view.active { display: block; }
+
+  .fab { position: fixed; bottom: 28px; right: 28px; background: var(--accent); color: #fff; border: none; border-radius: 50px; padding: 12px 22px; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 20px rgba(123,97,255,0.35); transition: transform 0.15s, box-shadow 0.15s; z-index: 90; }
+  .fab:hover { transform: translateY(-2px); box-shadow: 0 6px 28px rgba(123,97,255,0.45); }
+
+  .page-header { display: flex; align-items: baseline; gap: 12px; margin-bottom: 28px; }
+  .page-title { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; color: var(--text); }
+  .page-count { font-size: 12px; color: var(--text-muted); background: var(--surface2); border: 1px solid var(--border); padding: 2px 10px; border-radius: 20px; font-weight: 500; }
+
+  .cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+  .feature-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 20px; transition: box-shadow 0.15s, border-color 0.15s; }
+  .feature-card:hover { border-color: #C8C0B4; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+  .card-name { font-size: 15px; font-weight: 700; margin-bottom: 10px; cursor: pointer; line-height: 1.4; color: var(--text); }
+  .card-name:hover { color: var(--accent); }
+  .tags-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+  .tag { font-size: 11px; font-weight: 500; padding: 3px 9px; border-radius: 20px; background: var(--surface2); color: var(--text-muted); border: 1px solid var(--border); }
+
+  .stage-info { background: var(--surface2); border-radius: 10px; padding: 12px 14px; margin-bottom: 12px; border: 1px solid var(--border-light); }
+  .stage-meta { font-size: 12px; color: var(--text-muted); }
+  .stage-meta strong { color: var(--text); font-weight: 600; }
+
+  .today-note-wrap { margin: 2px 0 14px; }
+  .today-note-label { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 6px; display: block; }
+  .today-note-input { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 9px 12px; font-size: 13px; font-family: inherit; color: var(--text); resize: vertical; min-height: 40px; outline: none; transition: border-color 0.15s, background 0.15s; }
+  .today-note-input:focus { border-color: var(--accent); background: var(--surface); }
+  .today-note-input.saved { border-color: var(--green); }
+
+  .card-actions { display: flex; gap: 8px; margin-top: 4px; }
+  .btn { padding: 7px 14px; border-radius: 8px; border: none; font-size: 12px; font-weight: 600; cursor: pointer; transition: opacity 0.15s, transform 0.1s; font-family: inherit; }
+  .btn:hover { opacity: 0.85; }
+  .btn:active { transform: scale(0.98); }
+  .btn-ghost { background: var(--surface2); color: var(--text-muted); border: 1px solid var(--border); }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-success { background: var(--green); color: #fff; }
+  .btn-danger { background: transparent; color: var(--red); border: 1px solid var(--red); }
+  .btn-danger-solid { background: var(--red); color: #fff; }
+
+  .empty-state { text-align: center; padding: 80px 20px; color: var(--text-muted); }
+  .empty-state .empty-icon { font-size: 44px; margin-bottom: 16px; }
+  .empty-state p { font-size: 15px; margin-bottom: 6px; color: var(--text); font-weight: 600; }
+  .empty-state span { font-size: 13px; }
+
+  .status-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.4px; }
+  .status-badge.in_progress { background: rgba(123,97,255,0.1); color: var(--status-inprogress); }
+  .status-badge.done { background: rgba(27,196,125,0.1); color: var(--status-done); }
+  .status-badge.on_hold { background: rgba(245,166,35,0.12); color: var(--status-onhold); }
+
+  .filters { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 24px; align-items: center; }
+  .filter-select, .filter-input { background: var(--surface); border: 1px solid var(--border); color: var(--text); padding: 8px 12px; border-radius: 8px; font-size: 13px; outline: none; transition: border-color 0.15s; font-family: inherit; }
+  .filter-select:focus, .filter-input:focus { border-color: var(--accent); }
+  .filter-input { min-width: 200px; }
+
+  .log-list { display: flex; flex-direction: column; gap: 10px; }
+  .log-item { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; transition: box-shadow 0.15s, border-color 0.15s; }
+  .log-item:hover { border-color: #C8C0B4; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+  .log-item-header { padding: 16px 20px; cursor: pointer; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+  .log-item-left { flex: 1; min-width: 0; }
+  .log-item-name { font-size: 14px; font-weight: 700; cursor: pointer; display: inline-block; color: var(--text); }
+  .log-item-name:hover { color: var(--accent); }
+  .log-item-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
+  .log-meta-item { font-size: 12px; color: var(--text-muted); }
+  .log-meta-item.worked { color: var(--text); font-weight: 600; }
+  .log-meta-item.has-notes { color: var(--accent); font-weight: 600; }
+  .log-item-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+
+  .mini-gantt { margin: 0 20px 14px; height: 10px; position: relative; background: var(--surface2); border-radius: 6px; overflow: hidden; border: 1px solid var(--border-light); }
+  .mini-gantt-bar { position: absolute; height: 100%; border-radius: 4px; opacity: 0.9; min-width: 4px; }
+
+  .log-item-expanded { display: none; padding: 0 20px 18px; border-top: 1px solid var(--border-light); }
+  .log-item-expanded.open { display: block; }
+  .daynotes-title { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.6px; margin: 16px 0 10px; }
+  .daynotes { display: flex; flex-direction: column; gap: 2px; }
+  .daynote-row { display: flex; gap: 14px; font-size: 13px; padding: 8px 0; border-bottom: 1px solid var(--border-light); }
+  .daynote-row:last-child { border-bottom: none; }
+  .daynote-date { color: var(--accent); font-weight: 600; min-width: 92px; flex-shrink: 0; }
+  .daynote-text { color: var(--text); line-height: 1.5; white-space: pre-wrap; }
+  .daynotes-empty { font-size: 13px; color: var(--text-muted); margin-top: 8px; }
+  .log-notes { margin-top: 14px; padding: 12px 14px; background: var(--surface2); border-radius: 8px; font-size: 13px; color: var(--text-muted); line-height: 1.6; border: 1px solid var(--border-light); }
+  .log-actions { display: flex; gap: 8px; margin-top: 14px; }
+  .chevron { font-size: 11px; color: var(--text-muted); transition: transform 0.2s; }
+  .chevron.open { transform: rotate(180deg); }
+
+  .timeline-controls { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
+  .timeline-nav { display: flex; align-items: center; gap: 10px; }
+  .timeline-period { font-size: 16px; font-weight: 800; min-width: 200px; text-align: center; letter-spacing: -0.3px; }
+  .icon-btn { background: var(--surface); border: 1px solid var(--border); color: var(--text); width: 34px; height: 34px; border-radius: 8px; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; transition: background 0.15s; }
+  .icon-btn:hover { background: var(--surface2); }
+  .timeline-view-toggle { display: flex; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .toggle-btn { padding: 7px 14px; font-size: 12px; font-weight: 600; cursor: pointer; border: none; background: none; color: var(--text-muted); transition: all 0.15s; font-family: inherit; }
+  .toggle-btn.active { background: var(--surface); color: var(--accent); }
+
+  .status-legend { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 12px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted); font-weight: 500; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 3px; }
+  .legend-weekend { width: 14px; height: 14px; border-radius: 3px; background: var(--weekend); border: 1px solid var(--border); }
+  .legend-holiday { width: 14px; height: 14px; border-radius: 3px; background: var(--holiday); border: 1px solid var(--border); }
+  .legend-notedot { width: 8px; height: 8px; border-radius: 50%; background: var(--text); }
+  .gantt-hint { font-size: 12px; color: var(--text-muted); margin-bottom: 14px; line-height: 1.6; }
+  .gantt-hint b { color: var(--text); font-weight: 600; }
+
+  .gantt-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
+  .gantt-grid { min-width: 100%; }
+  .g-row { display: flex; border-bottom: 1px solid var(--border-light); }
+  .g-row:last-child { border-bottom: none; }
+  .g-name { width: 200px; min-width: 200px; padding: 9px 14px; border-right: 1px solid var(--border); position: sticky; left: 0; background: var(--surface); z-index: 5; display: flex; flex-direction: column; justify-content: center; }
+  .g-name .feat-name { font-weight: 700; font-size: 13px; line-height: 1.35; cursor: pointer; }
+  .g-name .feat-name:hover { color: var(--accent); }
+  .g-name .tags-row { margin: 5px 0 0; }
+
+  .g-track { position: relative; display: flex; flex-shrink: 0; }
+  .g-daycell { height: 100%; border-right: 1px solid rgba(0,0,0,0.03); cursor: pointer; flex-shrink: 0; position: relative; transition: background 0.1s; }
+  .g-daycell:hover { background: rgba(123,97,255,0.07); }
+  .g-daycell.today { background: rgba(123,97,255,0.10); }
+  .g-daycell.weekend { background: var(--weekend); }
+  .g-daycell.holiday { background: var(--holiday); }
+  .g-note-dot { position: absolute; bottom: 5px; left: 50%; transform: translateX(-50%); width: 6px; height: 6px; border-radius: 50%; background: var(--text); box-shadow: 0 0 0 2px var(--surface); pointer-events: none; }
+
+  .g-header-month .g-name, .g-header-day .g-name { background: var(--surface2); }
+  .g-header-month { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border); }
+  .g-month { text-align: center; padding: 8px 0; border-right: 1px solid var(--border-light); background: var(--surface2); flex-shrink: 0; }
+  .g-header-day { border-bottom: 1px solid var(--border); }
+  .g-dayhdr { text-align: center; padding: 6px 0; font-size: 11px; font-weight: 500; color: var(--text-muted); flex-shrink: 0; background: var(--surface); }
+  .g-dayhdr.today { color: var(--accent); font-weight: 700; }
+  .g-dayhdr.weekend { color: #B5651D; background: var(--weekend); }
+  .g-dayhdr.holiday { color: var(--amber); background: var(--holiday); }
+
+  .g-block { position: absolute; height: 24px; top: 16px; border-radius: 5px; color: #fff; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; overflow: hidden; white-space: nowrap; cursor: grab; z-index: 2; user-select: none; opacity: 0.93; box-shadow: 0 1px 3px rgba(0,0,0,0.15); }
+  .g-block:hover { opacity: 1; }
+  .g-block:active { cursor: grabbing; }
+  .g-handle { position: absolute; top: 0; height: 100%; width: 8px; cursor: ew-resize; z-index: 3; }
+  .g-handle.l { left: 0; border-radius: 5px 0 0 5px; }
+  .g-handle.r { right: 0; border-radius: 0 5px 5px 0; }
+  .g-handle:hover { background: rgba(255,255,255,0.35); }
+  .g-del { position: absolute; top: -7px; right: -7px; width: 17px; height: 17px; border-radius: 50%; background: var(--red); color: #fff; font-size: 12px; line-height: 1; display: none; align-items: center; justify-content: center; cursor: pointer; z-index: 6; box-shadow: 0 1px 4px rgba(0,0,0,0.25); }
+  .g-block:hover .g-del { display: flex; }
+
+  /* MODAL */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 200; display: none; align-items: flex-start; justify-content: center; padding: 40px 20px; overflow-y: auto; backdrop-filter: blur(3px); }
+  .modal-overlay.open { display: flex; }
+  .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; width: 100%; max-width: 580px; padding: 28px; box-shadow: 0 20px 60px rgba(0,0,0,0.12); }
+  .modal-title { font-size: 18px; font-weight: 800; margin-bottom: 6px; letter-spacing: -0.3px; }
+  .modal-subtitle { font-size: 13px; color: var(--text-muted); margin-bottom: 22px; line-height: 1.5; }
+  .form-group { margin-bottom: 20px; }
+  .form-label { display: block; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 8px; }
+  .form-input, .form-textarea, .form-select { width: 100%; background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 10px 14px; border-radius: 10px; font-size: 14px; outline: none; font-family: inherit; transition: border-color 0.15s; }
+  .form-input:focus, .form-textarea:focus, .form-select:focus { border-color: var(--accent); background: var(--surface); }
+  .form-textarea { resize: vertical; min-height: 80px; }
+  .field-hint { font-size: 11px; color: var(--text-muted); margin-top: 5px; line-height: 1.5; }
+
+  .status-toggle { display: flex; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  .status-option { flex: 1; padding: 9px; text-align: center; cursor: pointer; font-size: 12px; font-weight: 600; transition: all 0.15s; border: none; background: none; color: var(--text-muted); font-family: inherit; }
+  .status-option.active[data-value="in_progress"] { background: rgba(123,97,255,0.12); color: var(--status-inprogress); }
+  .status-option.active[data-value="done"] { background: rgba(27,196,125,0.12); color: var(--status-done); }
+  .status-option.active[data-value="on_hold"] { background: rgba(245,166,35,0.12); color: var(--status-onhold); }
+
+  .day-type-option { flex: 1; padding: 9px; text-align: center; cursor: pointer; font-size: 12px; font-weight: 600; transition: all 0.15s; border: none; background: none; color: var(--text-muted); font-family: inherit; }
+  .day-type-option.active[data-type="working"] { background: rgba(123,97,255,0.12); color: var(--accent); }
+  .day-type-option.active[data-type="holiday"] { background: rgba(245,166,35,0.16); color: var(--amber); }
+
+  .tags-picker { display: flex; flex-wrap: wrap; gap: 8px; }
+  .tag-option { padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; cursor: pointer; border: 1px solid var(--border); background: var(--surface2); color: var(--text-muted); transition: all 0.15s; }
+  .tag-option.selected { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .tag-option.add-tag { color: var(--accent); border-color: var(--accent); background: transparent; font-weight: 600; }
+
+  .blocks-list { display: flex; flex-direction: column; gap: 10px; }
+  .block-row { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; align-items: center; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
+  .block-row .form-input { background: var(--surface); font-size: 13px; padding: 8px 10px; }
+  .del-block-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 18px; line-height: 1; padding: 4px; border-radius: 6px; transition: color 0.15s; }
+  .del-block-btn:hover { color: var(--red); }
+  .add-block-btn { margin-top: 8px; background: none; border: 1px dashed var(--border); color: var(--text-muted); padding: 9px; border-radius: 10px; width: 100%; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.15s; font-family: inherit; }
+  .add-block-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  .modal-actions { display: flex; gap: 10px; margin-top: 28px; justify-content: flex-end; }
+  .error-msg { color: var(--red); font-size: 12px; margin-top: 6px; display: none; }
+  .error-msg.show { display: block; }
+
+  /* TOAST */
+  .toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--text); color: #fff; padding: 12px 18px; border-radius: 12px; display: flex; align-items: center; gap: 18px; font-size: 13px; font-weight: 500; box-shadow: 0 8px 30px rgba(0,0,0,0.25); z-index: 400; opacity: 0; pointer-events: none; transition: opacity 0.2s, transform 0.2s; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: auto; }
+  .toast button { background: none; border: none; color: #B8A9FF; font-weight: 700; font-size: 13px; cursor: pointer; padding: 2px 4px; }
+  .toast button:hover { color: #fff; }
+
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: #C0BAB0; }
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="nav-logo"><span class="nav-logo-dot"></span>Work Tracker</span>
+  <div class="nav-tabs">
+    <button class="nav-tab active" data-view="today">Today</button>
+    <button class="nav-tab" data-view="log">Log</button>
+    <button class="nav-tab" data-view="timeline">Timeline</button>
+  </div>
+</nav>
+
+<!-- TODAY VIEW -->
+<div id="view-today" class="view active">
+  <div class="page-header">
+    <h1 class="page-title">Today</h1>
+    <span class="page-count" id="today-count">0 in progress</span>
+  </div>
+  <div class="cards-grid" id="today-cards"></div>
+</div>
+
+<!-- LOG VIEW -->
+<div id="view-log" class="view">
+  <div class="page-header">
+    <h1 class="page-title">Feature Log</h1>
+    <span class="page-count" id="log-count">0 features</span>
+  </div>
+  <div class="filters">
+    <input class="filter-input" id="log-search" type="text" placeholder="Search features…">
+    <select class="filter-select" id="log-status">
+      <option value="">All statuses</option>
+      <option value="in_progress">In Progress</option>
+      <option value="done">Done</option>
+      <option value="on_hold">On Hold</option>
+    </select>
+    <select class="filter-select" id="log-tag"><option value="">All tags</option></select>
+    <select class="filter-select" id="log-year"><option value="">All years</option></select>
+  </div>
+  <div class="log-list" id="log-list"></div>
+</div>
+
+<!-- TIMELINE VIEW -->
+<div id="view-timeline" class="view">
+  <div class="timeline-controls">
+    <div class="timeline-nav">
+      <button class="icon-btn" id="tl-prev">&#8592;</button>
+      <span class="timeline-period" id="tl-period"></span>
+      <button class="icon-btn" id="tl-next">&#8594;</button>
+      <button class="icon-btn" id="tl-today" style="font-size:12px;width:auto;padding:0 12px;font-weight:600;">Today</button>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;">
+      <select class="filter-select" id="tl-tag-filter"><option value="">All tags</option></select>
+      <div class="timeline-view-toggle">
+        <button class="toggle-btn active" data-range="month">Month</button>
+        <button class="toggle-btn" data-range="quarter">Quarter</button>
+      </div>
+    </div>
+  </div>
+  <div class="status-legend" id="tl-legend"></div>
+  <div class="gantt-hint">
+    💡 <b>Click any day</b> to log what you did, or switch to <b>Holiday</b> in the modal to mark time off (with a date range). Weekends & holidays are shaded and don't count as worked days; a block spanning them splits around them. <b>Drag</b> a block's edges to extend, the middle to move, hover + <b>×</b> to remove.
+  </div>
+  <div class="gantt-wrap">
+    <div class="gantt-grid" id="gantt-grid"></div>
+  </div>
+</div>
+
+<!-- FEATURE MODAL -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <h2 class="modal-title" id="modal-title">Add Feature</h2>
+    <p class="modal-subtitle">Track a piece of design work.</p>
+
+    <div class="form-group">
+      <label class="form-label">Feature Name *</label>
+      <input class="form-input" id="f-name" type="text" placeholder="e.g. FD Details Redesign">
+      <p class="error-msg" id="err-name">Name is required</p>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Tags</label>
+      <div class="tags-picker" id="tags-picker"></div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Status</label>
+      <div class="status-toggle">
+        <button class="status-option active" data-value="in_progress">In Progress</button>
+        <button class="status-option" data-value="done">Done</button>
+        <button class="status-option" data-value="on_hold">On Hold</button>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Work blocks</label>
+      <div class="blocks-list" id="blocks-list"></div>
+      <button class="add-block-btn" id="add-block-btn">+ Add block</button>
+      <p class="field-hint">Each block is a stretch of days you worked. Add a separate block if you took a break in between. You can also draw/drag these on the Timeline. Weekends inside a block aren't counted.</p>
+      <p class="error-msg" id="err-blocks">Each block needs a start date, and end can't be before start</p>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Notes</label>
+      <textarea class="form-textarea" id="f-notes" placeholder="Any context, links, decisions…"></textarea>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-danger" id="modal-delete" style="display:none;margin-right:auto;">Delete</button>
+      <button class="btn btn-ghost" id="modal-cancel">Cancel</button>
+      <button class="btn btn-primary" id="modal-save">Save Feature</button>
+    </div>
+  </div>
+</div>
+
+<!-- DAY MODAL (log / holiday) -->
+<div class="modal-overlay" id="day-modal-overlay">
+  <div class="modal" style="max-width:480px">
+    <h2 class="modal-title" id="day-modal-title">Daily Log</h2>
+    <p class="modal-subtitle" id="day-modal-sub">Feature · date</p>
+
+    <div class="form-group">
+      <label class="form-label">Day type</label>
+      <div class="status-toggle">
+        <button class="day-type-option active" data-type="working">Working</button>
+        <button class="day-type-option" data-type="holiday">Holiday</button>
+      </div>
+    </div>
+
+    <div id="day-working-section">
+      <div class="form-group">
+        <label class="form-label">What did you do this day?</label>
+        <textarea class="form-textarea" id="day-note-input" placeholder="e.g. Built the empty states and shared with Ganesh for review" style="min-height:110px"></textarea>
+        <p class="field-hint">Saving marks this day as worked on this feature.</p>
+      </div>
+    </div>
+
+    <div id="day-holiday-section" style="display:none">
+      <div class="form-group">
+        <label class="form-label">Reason</label>
+        <input class="form-input" id="day-holiday-reason" type="text" placeholder="e.g. Diwali, Public holiday, Personal leave">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Holiday range</label>
+        <div style="display:flex; gap:12px">
+          <div style="flex:1"><input class="form-input" id="day-holiday-from" type="date"><div class="field-hint">From</div></div>
+          <div style="flex:1"><input class="form-input" id="day-holiday-to" type="date"><div class="field-hint">To</div></div>
+        </div>
+        <p class="field-hint">Marks every weekday in the range as a holiday (applies across all features).</p>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-danger" id="day-modal-delete" style="display:none;margin-right:auto;">Delete</button>
+      <button class="btn btn-ghost" id="day-modal-cancel">Cancel</button>
+      <button class="btn btn-primary" id="day-modal-save">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONFIRM MODAL -->
+<div class="modal-overlay" id="confirm-overlay">
+  <div class="modal" style="max-width:380px">
+    <h2 class="modal-title" id="confirm-title">Are you sure?</h2>
+    <p class="modal-subtitle" id="confirm-msg"></p>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="confirm-cancel">Cancel</button>
+      <button class="btn btn-danger-solid" id="confirm-ok">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"><span id="toast-msg"></span><button id="toast-undo">Undo</button></div>
+
+<button class="fab" id="fab"><span style="font-size:18px;line-height:1">+</span> Add Feature</button>
+
+<script>
+const DEFAULT_TAGS = [
+  'Jiraaf Web Desktop','Jiraaf Web Mobile','Jiraaf Mobile App',
+  'altGraaf Web Desktop','altGraaf Web Mobile','altGraaf Mobile App'
+];
+const STATUS_COLORS = { in_progress: '#7B61FF', done: '#1BC47D', on_hold: '#F5A623' };
+const DAY_W = 38; // px per weekday column
+
+// ── DATA LAYER ──────────────────────────────────────────
+function load(key, fallback) { try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; } }
+function save(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
+function getFeatures() { return load('wt_features', []); }
+function saveFeatures(f) { save('wt_features', f); }
+function getTags() { const s = load('wt_tags', null); if (!s) { save('wt_tags', DEFAULT_TAGS); return DEFAULT_TAGS; } return s; }
+function saveTags(t) { save('wt_tags', t); }
+function uid() { return Math.random().toString(36).slice(2) + Date.now().toString(36); }
+
+// ── DATE HELPERS (local, no UTC drift) ──────────────────
+function localISO(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+function today() { return localISO(new Date()); }
+function parseISO(ds) { return new Date(ds + 'T00:00:00'); }
+function daysBetween(a, b) { return Math.round((parseISO(b) - parseISO(a)) / 86400000); }
+function addDays(ds, n) { const d = parseISO(ds); d.setDate(d.getDate() + n); return localISO(d); }
+function daysAgo(d) { return daysBetween(d, today()); }
+function isWeekend(ds) { const g = parseISO(ds).getDay(); return g === 0 || g === 6; }
+function countWeekdays(a, b) { let c = a, n = 0; while (c <= b) { if (!isWeekend(c)) n++; c = addDays(c, 1); } return n; }
+function shiftWeekdays(ds, n) { if (!n) return ds; const step = n > 0 ? 1 : -1; let rem = Math.abs(n), c = ds; while (rem > 0) { c = addDays(c, step); if (!isWeekend(c)) rem--; } return c; }
+// holidays: { 'YYYY-MM-DD': 'reason' } — global, non-working like weekends
+function getHolidays() { return load('wt_holidays', {}); }
+function saveHolidays(h) { save('wt_holidays', h); }
+function isHoliday(ds) { return !!getHolidays()[ds]; }
+function formatDate(d) { if (!d) return '—'; return parseISO(d).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' }); }
+function formatDateShort(d) { if (!d) return '—'; return parseISO(d).toLocaleDateString('en-GB', { day:'numeric', month:'short' }); }
+
+// ── FEATURE HELPERS (blocks model) ──────────────────────
+function featureStart(f) { const s = (f.blocks||[]).map(b=>b.start).filter(Boolean).sort(); return s[0] || ''; }
+function featureEnd(f) { const e = (f.blocks||[]).map(b=>b.end||b.start).filter(Boolean).sort(); return e.at(-1) || ''; }
+function featureWorkedDays(f) {
+  // counts every day in a block; weekends are only present when explicitly added
+  const set = new Set();
+  (f.blocks||[]).forEach(b => { if (!b.start) return; let c = b.start; const e = b.end || b.start; while (c <= e) { set.add(c); c = addDays(c, 1); } });
+  return set.size;
+}
+function statusLabel(s) { return { in_progress: 'In Progress', done: 'Done', on_hold: 'On Hold' }[s] || s; }
+function dayNotesSorted(f) { return Object.entries(f.dayNotes || {}).filter(([,v]) => v && v.trim()).sort((a,b) => a[0].localeCompare(b[0])); }
+
+// ── MIGRATION ───────────────────────────────────────────
+function migrateFeatures() {
+  const features = getFeatures();
+  let changed = false;
+  features.forEach(f => {
+    if (Array.isArray(f.stages)) {
+      const starts = f.stages.map(s=>s.startDate).filter(Boolean).sort();
+      const ends = f.stages.map(s=>s.endDate).filter(Boolean).sort();
+      const hasOngoing = f.stages.some(s=>s.startDate && !s.endDate);
+      f.startDate = starts[0] || '';
+      f.endDate = hasOngoing ? '' : (ends.at(-1) || '');
+      delete f.stages; changed = true;
+    }
+    if (!Array.isArray(f.blocks)) {
+      if (f.startDate) f.blocks = [{ id: uid(), start: f.startDate, end: f.endDate || today() }];
+      else f.blocks = [];
+      changed = true;
+    }
+    if ('startDate' in f) { delete f.startDate; changed = true; }
+    if ('endDate' in f) { delete f.endDate; changed = true; }
+    if (!f.dayNotes || typeof f.dayNotes !== 'object') { f.dayNotes = {}; changed = true; }
+  });
+  if (changed) saveFeatures(features);
+}
+
+// one-time restore: re-add any seed features missing by name (recovers accidental deletes)
+function restoreSeedOnce() {
+  if (localStorage.getItem('wt_restored_v1')) return;
+  const features = getFeatures();
+  const names = new Set(features.map(f => f.name));
+  let added = 0;
+  buildSeed().forEach(s => { if (!names.has(s.name)) { features.push(s); added++; } });
+  if (added) saveFeatures(features);
+  localStorage.setItem('wt_restored_v1', '1');
+}
+
+// split any block that spans a non-working day (weekend OR holiday) into working-day runs.
+// a block made entirely of off-days = intentional work on a weekend/holiday — kept as-is.
+function normalizeBlocks(blocks) {
+  const holidays = getHolidays();
+  const off = ds => isWeekend(ds) || !!holidays[ds];
+  const countWork = (a, b) => { let c = a, n = 0; while (c <= b) { if (!off(c)) n++; c = addDays(c, 1); } return n; };
+  const out = [];
+  (blocks||[]).forEach(b => {
+    if (!b.start) return;
+    const end = b.end || b.start;
+    if (countWork(b.start, end) === 0) { out.push({ id: b.id || uid(), start: b.start, end }); return; }
+    let runStart = null, prev = null, c = b.start;
+    while (c <= end) {
+      if (!off(c)) { if (runStart === null) runStart = c; prev = c; }
+      else if (runStart !== null) { out.push({ id: uid(), start: runStart, end: prev }); runStart = null; }
+      c = addDays(c, 1);
+    }
+    if (runStart !== null) out.push({ id: uid(), start: runStart, end: prev });
+  });
+  return out;
+}
+// one-time: split existing blocks around weekends
+function splitWeekendsOnce() {
+  if (localStorage.getItem('wt_split_weekends_v1')) return;
+  const features = getFeatures();
+  features.forEach(f => { f.blocks = normalizeBlocks(f.blocks); });
+  saveFeatures(features);
+  localStorage.setItem('wt_split_weekends_v1', '1');
+}
+
+// ── NAV ─────────────────────────────────────────────────
+let currentView = 'today';
+document.querySelectorAll('.nav-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    currentView = tab.dataset.view;
+    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.getElementById('view-' + currentView).classList.add('active');
+    renderView();
+  });
+});
+function renderView() {
+  if (currentView === 'today') renderToday();
+  if (currentView === 'log') renderLog();
+  if (currentView === 'timeline') renderTimeline();
+}
+
+// ── TODAY ────────────────────────────────────────────────
+function renderToday() {
+  const features = getFeatures().filter(f => f.status === 'in_progress');
+  const container = document.getElementById('today-cards');
+  document.getElementById('today-count').textContent = features.length + ' in progress';
+  if (!features.length) {
+    container.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🎯</div><p>Nothing in progress</p><span>Add a feature to get started</span></div>`;
+    return;
+  }
+  const t = today();
+  container.innerHTML = features.map(f => {
+    const start = featureStart(f);
+    const worked = featureWorkedDays(f);
+    const todayNote = (f.dayNotes && f.dayNotes[t]) ? f.dayNotes[t] : '';
+    return `<div class="feature-card">
+      <div class="card-name" onclick="openEdit('${f.id}')">${escapeHTML(f.name)}</div>
+      <div class="tags-row">${f.tags.map(tg=>`<span class="tag">${escapeHTML(tg)}</span>`).join('')}</div>
+      <div class="stage-info">
+        <div class="stage-meta">Started <strong>${formatDate(start)}</strong>${start ? ` · ${daysAgo(start)} days ago` : ''} · <strong>${worked}</strong> day${worked!==1?'s':''} worked</div>
+      </div>
+      <div class="today-note-wrap">
+        <span class="today-note-label">What did I do today? (${formatDateShort(t)})</span>
+        <textarea class="today-note-input" placeholder="Jot a quick note…" onblur="saveTodayNote('${f.id}', this.value, this)">${escapeHTML(todayNote)}</textarea>
+      </div>
+      <div class="card-actions">
+        <button class="btn btn-ghost" onclick="openEdit('${f.id}')">Edit</button>
+        <button class="btn btn-success" onclick="markDone('${f.id}')">Mark Done</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function saveTodayNote(id, value, el) {
+  const features = getFeatures();
+  const f = features.find(x => x.id === id);
+  if (!f) return;
+  if (!f.dayNotes) f.dayNotes = {};
+  const t = today();
+  const v = value.trim();
+  if (v) f.dayNotes[t] = v; else delete f.dayNotes[t];
+  saveFeatures(features);
+  if (el) { el.classList.add('saved'); setTimeout(() => el.classList.remove('saved'), 1000); }
+}
+
+function markDone(id) {
+  const features = getFeatures();
+  const f = features.find(x => x.id === id);
+  if (!f) return;
+  f.status = 'done';
+  saveFeatures(features);
+  renderView();
+}
+
+// ── LOG ──────────────────────────────────────────────────
+function renderLog() {
+  const all = getFeatures();
+  populateLogFilters(all);
+  const search = document.getElementById('log-search').value.toLowerCase();
+  const statusF = document.getElementById('log-status').value;
+  const tagF = document.getElementById('log-tag').value;
+  const yearF = document.getElementById('log-year').value;
+
+  let features = [...all].sort((a,b) => {
+    const aD = featureStart(a) || a.createdAt;
+    const bD = featureStart(b) || b.createdAt;
+    return bD > aD ? 1 : -1;
+  });
+  if (search) features = features.filter(f => f.name.toLowerCase().includes(search));
+  if (statusF) features = features.filter(f => f.status === statusF);
+  if (tagF) features = features.filter(f => f.tags.includes(tagF));
+  if (yearF) features = features.filter(f => { const s = featureStart(f); return s && s.startsWith(yearF); });
+
+  document.getElementById('log-count').textContent = features.length + ' feature' + (features.length !== 1 ? 's' : '');
+  const list = document.getElementById('log-list');
+  if (!features.length) {
+    list.innerHTML = `<div class="empty-state"><div class="empty-icon">🔍</div><p>No features found</p><span>Try adjusting your filters</span></div>`;
+    return;
+  }
+
+  list.innerHTML = features.map(f => {
+    const start = featureStart(f), end = featureEnd(f);
+    const worked = featureWorkedDays(f);
+    const notes = dayNotesSorted(f);
+    return `<div class="log-item" id="log-${f.id}">
+      <div class="log-item-header" onclick="toggleLog('${f.id}')">
+        <div class="log-item-left">
+          <div class="tags-row" style="margin-bottom:5px">${f.tags.map(t=>`<span class="tag">${escapeHTML(t)}</span>`).join('')}</div>
+          <span class="log-item-name" onclick="event.stopPropagation();openEdit('${f.id}')">${escapeHTML(f.name)}</span>
+          <div class="log-item-meta">
+            <span class="log-meta-item">${start ? formatDate(start) : '—'} → ${end ? formatDate(end) : '—'}</span>
+            <span class="log-meta-item worked">· ${worked} day${worked!==1?'s':''} worked</span>
+            ${notes.length ? `<span class="log-meta-item has-notes">· ${notes.length} note${notes.length!==1?'s':''}</span>` : ''}
+          </div>
+        </div>
+        <div class="log-item-right">
+          <span class="status-badge ${f.status}">${statusLabel(f.status)}</span>
+          <span class="chevron" id="chev-${f.id}">▼</span>
+        </div>
+      </div>
+      <div class="mini-gantt">${buildMiniBlocks(f)}</div>
+      <div class="log-item-expanded" id="exp-${f.id}">
+        <div class="daynotes-title">Daily Log</div>
+        ${notes.length ? `<div class="daynotes">${notes.map(([d,txt]) =>
+          `<div class="daynote-row"><span class="daynote-date">${formatDateShort(d)}</span><span class="daynote-text">${escapeHTML(txt)}</span></div>`
+        ).join('')}</div>` : `<div class="daynotes-empty">No daily notes yet — add them from the Timeline by clicking a block.</div>`}
+        ${f.notes ? `<div class="log-notes">${escapeHTML(f.notes)}</div>` : ''}
+        <div class="log-actions">
+          <button class="btn btn-ghost" onclick="openEdit('${f.id}')">Edit</button>
+          <button class="btn btn-danger" onclick="deleteFeature('${f.id}')">Delete</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function buildMiniBlocks(f) {
+  const s = featureStart(f), e = featureEnd(f);
+  if (!s) return `<div class="mini-gantt-bar" style="left:0;width:0"></div>`;
+  const total = daysBetween(s, e) + 1 || 1;
+  return f.blocks.map(b => {
+    const l = (daysBetween(s, b.start) / total) * 100;
+    const w = Math.max(((daysBetween(b.start, b.end || b.start) + 1) / total) * 100, 2);
+    return `<div class="mini-gantt-bar" style="left:${l}%;width:${w}%;background:${STATUS_COLORS[f.status]||'#aaa'}"></div>`;
+  }).join('');
+}
+
+function populateLogFilters(all) {
+  const tags = getTags();
+  const years = [...new Set(all.flatMap(f => { const s = featureStart(f); return s ? [s.slice(0,4)] : []; }))].sort().reverse();
+  const tagSel = document.getElementById('log-tag');
+  const cv = tagSel.value;
+  tagSel.innerHTML = '<option value="">All tags</option>' + tags.map(t=>`<option value="${t}">${t}</option>`).join('');
+  tagSel.value = cv;
+  const yearSel = document.getElementById('log-year');
+  const cy = yearSel.value;
+  yearSel.innerHTML = '<option value="">All years</option>' + years.map(y=>`<option value="${y}">${y}</option>`).join('');
+  yearSel.value = cy;
+}
+
+function toggleLog(id) {
+  const exp = document.getElementById('exp-' + id);
+  const chev = document.getElementById('chev-' + id);
+  exp.classList.toggle('open');
+  if (chev) chev.classList.toggle('open');
+}
+['log-search','log-status','log-tag','log-year'].forEach(id => {
+  document.getElementById(id).addEventListener('input', renderLog);
+  document.getElementById(id).addEventListener('change', renderLog);
+});
+
+// ── TIMELINE (weekday-only columns) ─────────────────────
+let tlAnchor = new Date();
+let tlRange = 'month';
+let tlPeriodStart = '';  // ISO of first visible day
+let tlTotalDays = 0;
+
+function tlStartEnd() {
+  const d = new Date(tlAnchor);
+  if (tlRange === 'month') return { start: new Date(d.getFullYear(), d.getMonth(), 1), end: new Date(d.getFullYear(), d.getMonth()+1, 0) };
+  const q = Math.floor(d.getMonth()/3);
+  return { start: new Date(d.getFullYear(), q*3, 1), end: new Date(d.getFullYear(), q*3+3, 0) };
+}
+function dateRange(start, end) { const days = []; const cur = new Date(start); while (cur <= end) { days.push(new Date(cur)); cur.setDate(cur.getDate()+1); } return days; }
+
+function renderTimeline() {
+  const { start, end } = tlStartEnd();
+  const days = dateRange(start, end);
+  const todayStr = today();
+  tlPeriodStart = localISO(start);
+  tlTotalDays = days.length;
+  const trackW = tlTotalDays * DAY_W;
+
+  document.getElementById('tl-period').textContent = tlRange === 'month'
+    ? start.toLocaleDateString('en-GB',{month:'long',year:'numeric'})
+    : `Q${Math.floor(start.getMonth()/3)+1} ${start.getFullYear()}`;
+
+  const tags = getTags();
+  const tlTagSel = document.getElementById('tl-tag-filter');
+  const curTagVal = tlTagSel.value;
+  tlTagSel.innerHTML = '<option value="">All tags</option>' + tags.map(t=>`<option value="${t}">${t}</option>`).join('');
+  tlTagSel.value = curTagVal;
+
+  document.getElementById('tl-legend').innerHTML =
+    Object.entries(STATUS_COLORS).map(([k,c]) => `<div class="legend-item"><span class="legend-dot" style="background:${c}"></span>${statusLabel(k)}</div>`).join('') +
+    `<div class="legend-item"><span class="legend-weekend"></span>Weekend</div>` +
+    `<div class="legend-item"><span class="legend-holiday"></span>Holiday</div>` +
+    `<div class="legend-item"><span class="legend-notedot"></span>Has a daily note</div>`;
+
+  const holidays = getHolidays();
+  let features = getFeatures();
+  const tagFilter = tlTagSel.value;
+  if (tagFilter) features = features.filter(f => f.tags.includes(tagFilter));
+  const pStart = localISO(start), pEnd = localISO(end);
+  features = features.filter(f => (f.blocks||[]).some(b => b.start && b.start <= pEnd && (b.end||b.start) >= pStart));
+
+  const grid = document.getElementById('gantt-grid');
+  if (!features.length) {
+    grid.innerHTML = `<div style="padding:60px;text-align:center;color:var(--text-muted);font-size:14px">No features in this period</div>`;
+    return;
+  }
+
+  // month header groups across all day columns
+  const monthGroups = [];
+  days.forEach(d => {
+    const m = d.toLocaleDateString('en-GB',{month:'short',year:'numeric'});
+    if (!monthGroups.length || monthGroups.at(-1).label !== m) monthGroups.push({label:m,count:1});
+    else monthGroups.at(-1).count++;
+  });
+
+  let html = `<div class="g-row g-header-month">
+      <div class="g-name"></div>
+      <div class="g-track" style="width:${trackW}px">
+        ${monthGroups.map(mg=>`<div class="g-month" style="width:${mg.count*DAY_W}px">${mg.label}</div>`).join('')}
+      </div>
+    </div>
+    <div class="g-row g-header-day">
+      <div class="g-name" style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;font-weight:700">Feature</div>
+      <div class="g-track" style="width:${trackW}px">
+        ${days.map(d => {
+          const ds = localISO(d);
+          const isT = ds === todayStr;
+          const isW = d.getDay() === 0 || d.getDay() === 6;
+          const hol = holidays[ds];
+          return `<div class="g-dayhdr${isT?' today':''}${isW?' weekend':''}${hol?' holiday':''}" style="width:${DAY_W}px"${hol?` title="${escapeAttr(hol)}"`:''}>${d.getDate()}</div>`;
+        }).join('')}
+      </div>
+    </div>`;
+
+  features.forEach(f => {
+    let cells = days.map(d => {
+      const ds = localISO(d);
+      const isT = ds === todayStr;
+      const isW = d.getDay() === 0 || d.getDay() === 6;
+      const hol = holidays[ds];
+      const hasNote = f.dayNotes && f.dayNotes[ds] && f.dayNotes[ds].trim();
+      let cls = 'g-daycell';
+      if (isT) cls += ' today';
+      if (isW) cls += ' weekend';
+      if (hol) cls += ' holiday';
+      const tip = hol ? formatDate(ds) + ' — Holiday: ' + escapeAttr(hol) : formatDate(ds) + (hasNote ? ' — ' + escapeAttr(f.dayNotes[ds]) : '');
+      return `<div class="${cls}" style="width:${DAY_W}px" onclick="openDayModal('${f.id}','${ds}')" title="${tip}">${hasNote ? '<span class="g-note-dot"></span>' : ''}</div>`;
+    }).join('');
+
+    let blocks = '';
+    (f.blocks||[]).forEach(b => {
+      if (!b.start) return;
+      const bEnd = b.end || b.start;
+      if (!(b.start <= pEnd && bEnd >= pStart)) return; // not in view
+      const visS = Math.max(daysBetween(pStart, b.start), 0);
+      const visE = Math.min(daysBetween(pStart, bEnd), tlTotalDays - 1);
+      const left = visS * DAY_W, width = (visE - visS + 1) * DAY_W;
+      const dayCount = daysBetween(b.start, bEnd) + 1;
+      blocks += `<div class="g-block" id="blk-${b.id}" style="left:${left}px;width:${width}px;background:${STATUS_COLORS[f.status]||'#aaa'}" onmousedown="blockDown(event,'${f.id}','${b.id}')" title="${formatDate(b.start)} → ${formatDate(bEnd)} · ${dayCount} day${dayCount!==1?'s':''}">
+        <div class="g-handle l" data-h="l"></div>
+        ${width > 30 ? `<span>${dayCount}d</span>` : ''}
+        <div class="g-handle r" data-h="r"></div>
+        <div class="g-del" data-del="1" onclick="delBlock(event,'${f.id}','${b.id}')">×</div>
+      </div>`;
+    });
+
+    html += `<div class="g-row">
+      <div class="g-name">
+        <span class="feat-name" onclick="openEdit('${f.id}')">${escapeHTML(f.name)}</span>
+        <div class="tags-row">${f.tags.map(t=>`<span class="tag">${escapeHTML(t)}</span>`).join('')}</div>
+      </div>
+      <div class="g-track" style="width:${trackW}px">${cells}${blocks}</div>
+    </div>`;
+  });
+
+  grid.innerHTML = html;
+}
+
+function delBlock(e, fid, bid) {
+  e.stopPropagation();
+  confirmDialog('Delete this work block? Daily notes on those days are kept.', () => {
+    const snapshot = getFeatures();
+    const features = getFeatures();
+    const f = features.find(x => x.id === fid);
+    if (f) f.blocks = (f.blocks||[]).filter(b => b.id !== bid);
+    saveFeatures(features);
+    renderTimeline();
+    showToast('Block deleted', () => { saveFeatures(snapshot); renderView(); });
+  });
+}
+
+// ── BLOCK DRAG (move / resize), weekday-aware ───────────
+let dragState = null;
+function blockDown(e, fid, bid) {
+  if (e.target.dataset.del) return;
+  const f = getFeatures().find(x => x.id === fid);
+  const b = f && (f.blocks||[]).find(x => x.id === bid);
+  if (!b) return;
+  e.preventDefault();
+  const mode = e.target.dataset.h === 'l' ? 'resize-l' : e.target.dataset.h === 'r' ? 'resize-r' : 'move';
+  dragState = { fid, bid, mode, moved: false, startX: e.clientX, origStart: b.start, origEnd: b.end || b.start, newStart: b.start, newEnd: b.end || b.start, el: document.getElementById('blk-' + bid) };
+}
+
+document.addEventListener('mousemove', e => {
+  if (!dragState) return;
+  const dx = e.clientX - dragState.startX;
+  if (Math.abs(dx) > 3) dragState.moved = true;
+  const delta = Math.round(dx / DAY_W);
+  let ns = dragState.origStart, ne = dragState.origEnd;
+  if (dragState.mode === 'move') { ns = addDays(dragState.origStart, delta); ne = addDays(dragState.origEnd, delta); }
+  else if (dragState.mode === 'resize-l') { ns = addDays(dragState.origStart, delta); if (ns > dragState.origEnd) ns = dragState.origEnd; ne = dragState.origEnd; }
+  else if (dragState.mode === 'resize-r') { ne = addDays(dragState.origEnd, delta); if (ne < dragState.origStart) ne = dragState.origStart; ns = dragState.origStart; }
+  dragState.newStart = ns; dragState.newEnd = ne;
+  if (dragState.el) {
+    const visS = Math.max(0, Math.min(daysBetween(tlPeriodStart, ns), tlTotalDays - 1));
+    const visE = Math.max(visS, Math.min(daysBetween(tlPeriodStart, ne), tlTotalDays - 1));
+    dragState.el.style.left = (visS*DAY_W) + 'px';
+    dragState.el.style.width = ((visE-visS+1)*DAY_W) + 'px';
+  }
+});
+
+document.addEventListener('mouseup', () => {
+  if (!dragState) return;
+  const ds = dragState; dragState = null;
+  if (ds.moved) {
+    const features = getFeatures();
+    const f = features.find(x => x.id === ds.fid);
+    const b = f && (f.blocks||[]).find(x => x.id === ds.bid);
+    if (b) { b.start = ds.newStart; b.end = ds.newEnd; f.blocks = normalizeBlocks(f.blocks); saveFeatures(features); }
+    renderTimeline();
+  } else {
+    const track = ds.el ? ds.el.parentElement : null;
+    if (track) {
+      const rect = track.getBoundingClientRect();
+      let idx = Math.floor((ds.startX - rect.left) / DAY_W);
+      idx = Math.max(0, Math.min(idx, tlTotalDays - 1));
+      openDayModal(ds.fid, addDays(tlPeriodStart, idx));
+    }
+  }
+});
+
+document.getElementById('tl-prev').addEventListener('click', () => { tlRange === 'month' ? tlAnchor.setMonth(tlAnchor.getMonth()-1) : tlAnchor.setMonth(tlAnchor.getMonth()-3); renderTimeline(); });
+document.getElementById('tl-next').addEventListener('click', () => { tlRange === 'month' ? tlAnchor.setMonth(tlAnchor.getMonth()+1) : tlAnchor.setMonth(tlAnchor.getMonth()+3); renderTimeline(); });
+document.getElementById('tl-today').addEventListener('click', () => { tlAnchor = new Date(); renderTimeline(); });
+document.querySelectorAll('.toggle-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    tlRange = btn.dataset.range;
+    document.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderTimeline();
+  });
+});
+document.getElementById('tl-tag-filter').addEventListener('change', renderTimeline);
+
+// ── DAY MODAL (log / holiday) ────────────────────────────
+let dayCtx = { fid: null, date: null };
+let dayType = 'working';
+
+function openDayModal(fid, date) {
+  const f = getFeatures().find(x => x.id === fid);
+  if (!f) return;
+  dayCtx = { fid, date };
+  document.getElementById('day-modal-title').textContent = 'Log — ' + formatDate(date);
+  document.getElementById('day-modal-sub').textContent = f.name;
+  const holidays = getHolidays();
+  const isHol = !!holidays[date];
+  document.getElementById('day-note-input').value = (f.dayNotes && f.dayNotes[date]) ? f.dayNotes[date] : '';
+  document.getElementById('day-holiday-reason').value = isHol ? holidays[date] : '';
+  document.getElementById('day-holiday-from').value = date;
+  document.getElementById('day-holiday-to').value = date;
+  setDayType(isHol ? 'holiday' : 'working');
+  const covered = (f.blocks||[]).some(b => b.start && b.start <= date && (b.end||b.start) >= date);
+  const hasNote = !!(f.dayNotes && f.dayNotes[date]);
+  document.getElementById('day-modal-delete').style.display = (isHol || covered || hasNote) ? 'block' : 'none';
+  document.getElementById('day-modal-overlay').classList.add('open');
+  if (!isHol) document.getElementById('day-note-input').focus();
+}
+function setDayType(type) {
+  dayType = type;
+  document.querySelectorAll('.day-type-option').forEach(o => o.classList.toggle('active', o.dataset.type === type));
+  document.getElementById('day-working-section').style.display = type === 'working' ? 'block' : 'none';
+  document.getElementById('day-holiday-section').style.display = type === 'holiday' ? 'block' : 'none';
+}
+document.querySelectorAll('.day-type-option').forEach(o => o.addEventListener('click', () => setDayType(o.dataset.type)));
+function closeDayModal() { document.getElementById('day-modal-overlay').classList.remove('open'); }
+document.getElementById('day-modal-cancel').addEventListener('click', closeDayModal);
+document.getElementById('day-modal-overlay').addEventListener('click', e => { if (e.target === document.getElementById('day-modal-overlay')) closeDayModal(); });
+
+document.getElementById('day-modal-save').addEventListener('click', () => {
+  if (dayType === 'working') saveWorkingDay(); else saveHolidayRange();
+});
+
+function saveWorkingDay() {
+  const features = getFeatures();
+  const f = features.find(x => x.id === dayCtx.fid);
+  if (!f) return closeDayModal();
+  const date = dayCtx.date;
+  const holidays = getHolidays();
+  if (holidays[date]) { delete holidays[date]; saveHolidays(holidays); } // switching a holiday back to working
+  if (!Array.isArray(f.blocks)) f.blocks = [];
+  const covered = f.blocks.some(b => b.start && b.start <= date && (b.end||b.start) >= date);
+  if (!covered) { f.blocks.push({ id: uid(), start: date, end: date }); f.blocks = normalizeBlocks(f.blocks); }
+  if (!f.dayNotes) f.dayNotes = {};
+  const v = document.getElementById('day-note-input').value.trim();
+  if (v) f.dayNotes[date] = v; else delete f.dayNotes[date];
+  saveFeatures(features);
+  closeDayModal();
+  renderView();
+}
+
+function saveHolidayRange() {
+  const snapF = getFeatures();
+  const snapH = getHolidays();
+  const reason = document.getElementById('day-holiday-reason').value.trim() || 'Holiday';
+  let from = document.getElementById('day-holiday-from').value || dayCtx.date;
+  let to = document.getElementById('day-holiday-to').value || from;
+  if (to < from) { const t = from; from = to; to = t; }
+  const holidays = getHolidays();
+  let c = from, n = 0;
+  while (c <= to) { if (!isWeekend(c)) { holidays[c] = reason; n++; } c = addDays(c, 1); }
+  saveHolidays(holidays);
+  const features = getFeatures();
+  features.forEach(f => { f.blocks = normalizeBlocks(f.blocks); }); // split work around new holidays
+  saveFeatures(features);
+  closeDayModal();
+  renderView();
+  showToast(n > 1 ? `${n} holidays marked` : 'Holiday marked', () => { saveHolidays(snapH); saveFeatures(snapF); renderView(); });
+}
+
+document.getElementById('day-modal-delete').addEventListener('click', () => {
+  if (dayType === 'holiday') {
+    confirmDialog('Remove this holiday?', () => {
+      const snap = getHolidays();
+      const holidays = getHolidays();
+      delete holidays[dayCtx.date];
+      saveHolidays(holidays);
+      closeDayModal();
+      renderView();
+      showToast('Holiday removed', () => { saveHolidays(snap); renderView(); });
+    });
+  } else {
+    confirmDialog('Delete the log for this day? (also removes a single-day work block here)', () => {
+      const snapshot = getFeatures();
+      const features = getFeatures();
+      const f = features.find(x => x.id === dayCtx.fid);
+      if (f) {
+        if (f.dayNotes) delete f.dayNotes[dayCtx.date];
+        f.blocks = (f.blocks||[]).filter(b => !(b.start === dayCtx.date && (b.end||b.start) === dayCtx.date));
+      }
+      saveFeatures(features);
+      closeDayModal();
+      renderView();
+      showToast('Day log deleted', () => { saveFeatures(snapshot); renderView(); });
+    });
+  }
+});
+
+// ── FEATURE MODAL ────────────────────────────────────────
+let editingId = null, selectedTags = [], selectedStatus = 'in_progress';
+
+function openAdd() {
+  editingId = null; selectedTags = []; selectedStatus = 'in_progress';
+  document.getElementById('modal-title').textContent = 'Add Feature';
+  document.getElementById('f-name').value = '';
+  document.getElementById('f-notes').value = '';
+  document.getElementById('modal-delete').style.display = 'none';
+  document.getElementById('err-name').classList.remove('show');
+  document.getElementById('err-blocks').classList.remove('show');
+  setStatus('in_progress');
+  renderTagsPicker();
+  document.getElementById('blocks-list').innerHTML = '';
+  addBlockRow({ start: today(), end: today() });
+  document.getElementById('modal-overlay').classList.add('open');
+  document.getElementById('f-name').focus();
+}
+
+function openEdit(id) {
+  const f = getFeatures().find(x => x.id === id);
+  if (!f) return;
+  editingId = id; selectedTags = [...f.tags]; selectedStatus = f.status;
+  document.getElementById('modal-title').textContent = 'Edit Feature';
+  document.getElementById('f-name').value = f.name;
+  document.getElementById('f-notes').value = f.notes || '';
+  document.getElementById('modal-delete').style.display = 'block';
+  document.getElementById('err-name').classList.remove('show');
+  document.getElementById('err-blocks').classList.remove('show');
+  setStatus(f.status);
+  renderTagsPicker();
+  document.getElementById('blocks-list').innerHTML = '';
+  if (f.blocks && f.blocks.length) f.blocks.forEach(b => addBlockRow(b));
+  else addBlockRow({ start: today(), end: today() });
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+function closeModal() { document.getElementById('modal-overlay').classList.remove('open'); }
+document.getElementById('modal-overlay').addEventListener('click', e => { if (e.target===document.getElementById('modal-overlay')) closeModal(); });
+document.getElementById('modal-cancel').addEventListener('click', closeModal);
+document.getElementById('fab').addEventListener('click', openAdd);
+
+function setStatus(val) { selectedStatus = val; document.querySelectorAll('.status-option').forEach(o => o.classList.toggle('active', o.dataset.value===val)); }
+document.querySelectorAll('.status-option').forEach(o => o.addEventListener('click', () => setStatus(o.dataset.value)));
+
+function renderTagsPicker() {
+  const tags = getTags();
+  document.getElementById('tags-picker').innerHTML =
+    tags.map(t=>`<span class="tag-option ${selectedTags.includes(t)?'selected':''}" onclick="toggleTag('${escapeAttr(t)}')">${escapeHTML(t)}</span>`).join('') +
+    `<span class="tag-option add-tag" onclick="promptAddTag()">+ New tag</span>`;
+}
+function toggleTag(t) { selectedTags = selectedTags.includes(t) ? selectedTags.filter(x=>x!==t) : [...selectedTags, t]; renderTagsPicker(); }
+function promptAddTag() {
+  const name = prompt('New tag name:');
+  if (!name?.trim()) return;
+  const tags = getTags(); const trimmed = name.trim();
+  if (!tags.includes(trimmed)) { tags.push(trimmed); saveTags(tags); }
+  if (!selectedTags.includes(trimmed)) selectedTags.push(trimmed);
+  renderTagsPicker();
+}
+
+function addBlockRow(block) {
+  const list = document.getElementById('blocks-list');
+  const id = uid();
+  const row = document.createElement('div');
+  row.className = 'block-row'; row.id = 'br-' + id;
+  row.innerHTML = `
+    <input class="form-input" type="date" id="bstart-${id}" value="${block?.start||''}">
+    <input class="form-input" type="date" id="bend-${id}" value="${block?.end||block?.start||''}">
+    <button class="del-block-btn" onclick="removeBlockRow('${id}')" title="Remove block">×</button>`;
+  list.appendChild(row);
+}
+function removeBlockRow(id) {
+  confirmDialog('Remove this block from the feature?', () => { document.getElementById('br-'+id)?.remove(); });
+}
+document.getElementById('add-block-btn').addEventListener('click', () => addBlockRow({ start: today(), end: today() }));
+
+function getBlocksFromForm() {
+  return [...document.querySelectorAll('#blocks-list .block-row')].map(row => {
+    const id = row.id.replace('br-','');
+    const start = document.getElementById('bstart-'+id)?.value || '';
+    const end = document.getElementById('bend-'+id)?.value || '';
+    return { id: uid(), start, end: end || start };
+  }).filter(b => b.start);
+}
+
+document.getElementById('modal-save').addEventListener('click', () => {
+  const name = document.getElementById('f-name').value.trim();
+  let valid = true;
+  if (!name) { document.getElementById('err-name').classList.add('show'); valid = false; }
+  else document.getElementById('err-name').classList.remove('show');
+  const rawBlocks = getBlocksFromForm();
+  const badBlock = rawBlocks.some(b => b.end && b.end < b.start);
+  if (badBlock || rawBlocks.length === 0) { document.getElementById('err-blocks').classList.add('show'); valid = false; }
+  else document.getElementById('err-blocks').classList.remove('show');
+  if (!valid) return;
+
+  const blocks = normalizeBlocks(rawBlocks); // split around weekends
+  const features = getFeatures();
+  const data = { name, tags: selectedTags, status: selectedStatus, blocks, notes: document.getElementById('f-notes').value.trim() };
+  if (editingId) {
+    const idx = features.findIndex(f => f.id===editingId);
+    if (idx > -1) features[idx] = { ...features[idx], ...data };
+  } else {
+    features.push({ id: uid(), ...data, dayNotes: {}, createdAt: new Date().toISOString() });
+  }
+  saveFeatures(features);
+  closeModal();
+  renderView();
+});
+
+document.getElementById('modal-delete').addEventListener('click', () => { if (editingId) deleteFeature(editingId); });
+function deleteFeature(id) {
+  const f = getFeatures().find(x => x.id === id);
+  confirmDialog(`Delete "${f ? f.name : 'this feature'}"? This removes it and all its daily notes.`, () => {
+    const snapshot = getFeatures();
+    saveFeatures(snapshot.filter(x => x.id !== id));
+    closeModal();
+    renderView();
+    showToast('Feature deleted', () => { saveFeatures(snapshot); renderView(); });
+  });
+}
+
+// ── CONFIRM DIALOG ───────────────────────────────────────
+let confirmCb = null;
+function confirmDialog(msg, onYes) {
+  confirmCb = onYes;
+  document.getElementById('confirm-msg').textContent = msg;
+  document.getElementById('confirm-overlay').classList.add('open');
+}
+function closeConfirm() { confirmCb = null; document.getElementById('confirm-overlay').classList.remove('open'); }
+document.getElementById('confirm-cancel').addEventListener('click', closeConfirm);
+document.getElementById('confirm-overlay').addEventListener('click', e => { if (e.target === document.getElementById('confirm-overlay')) closeConfirm(); });
+document.getElementById('confirm-ok').addEventListener('click', () => { const cb = confirmCb; closeConfirm(); if (cb) cb(); });
+
+// ── TOAST (with undo) ────────────────────────────────────
+let toastTimer = null, toastUndo = null;
+function showToast(msg, undoFn) {
+  clearTimeout(toastTimer);
+  toastUndo = undoFn;
+  document.getElementById('toast-msg').textContent = msg;
+  const t = document.getElementById('toast');
+  t.classList.add('show');
+  toastTimer = setTimeout(hideToast, 6000);
+}
+function hideToast() { document.getElementById('toast').classList.remove('show'); toastUndo = null; }
+document.getElementById('toast-undo').addEventListener('click', () => { if (toastUndo) toastUndo(); hideToast(); });
+
+// ── ESCAPING ─────────────────────────────────────────────
+function escapeHTML(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function escapeAttr(s) { return String(s ?? '').replace(/"/g, '&quot;').replace(/'/g, "\\'").replace(/\n/g, ' '); }
+
+// ── SEED DATA ────────────────────────────────────────────
+function buildSeed() {
+  const F = (name, tags, status, start, end, notes) => ({
+    id: uid(), name, tags, status,
+    blocks: [{ id: uid(), start, end: end || today() }],
+    dayNotes: {}, notes, createdAt: start + 'T09:00:00Z'
+  });
+  return [
+    F('Jiraaf App FD Details', ['Jiraaf Mobile App'], 'done', '2025-10-21', '2025-11-01', 'Ideation and wireframes for FD details on the Jiraaf app.'),
+    F('Jiraaf Web FD Listing', ['Jiraaf Web Desktop','Jiraaf Web Mobile'], 'done', '2025-10-21', '2025-11-20', 'FD listing page design and approval for Jiraaf web.'),
+    F('Bond Analyser Revamp', ['Jiraaf Web Desktop','Jiraaf Mobile App'], 'done', '2025-10-22', '2025-11-20', 'Bond Analyser discussion, direction and designs. Showcased to team.'),
+    F('RA Insights', ['Jiraaf Web Desktop','Jiraaf Web Mobile','Jiraaf Mobile App'], 'done', '2025-10-28', '2025-12-20', 'Full RA Insights project — from ideation through hi-fi wireframing. RA Insights details, listing card, admin UI.'),
+    F('altGraaf FD Listing & Details', ['altGraaf Web Desktop','altGraaf Web Mobile','altGraaf Mobile App'], 'done', '2025-11-01', '2025-12-10', 'FD listing and details design for altGraaf. Different tenure support added.'),
+    F('Unit Selection Improvements', ['Jiraaf Mobile App'], 'done', '2025-11-10', '2025-12-05', 'Display units with min investment value. KYC not done users should also see units. Bring KYC CTA on units selection screen.'),
+    F('Pending Orders', ['Jiraaf Web Desktop','Jiraaf Mobile App'], 'done', '2025-11-12', '2025-12-15', 'Logic and design changes for pending orders. Discussed with design team.'),
+    F('Opportunity Details Redesign', ['Jiraaf Mobile App','altGraaf Mobile App'], 'done', '2025-12-05', '2026-01-05', 'Redesign as per mobile app. Standardising the layout to fit mobile.'),
+    F('RA Insights Details Page', ['Jiraaf Web Desktop','Jiraaf Web Mobile'], 'done', '2026-01-05', '2026-02-10', 'Full details page for RA Insights. Admin UI, app design, remaining bits.'),
+    F('IFA Investment Activity', ['Jiraaf Web Desktop'], 'done', '2026-01-08', '2026-01-22', 'Different states for IFA investment activity.'),
+    F('KYC Flow — DOB Addition', ['Jiraaf Mobile App'], 'done', '2026-01-14', '2026-02-05', 'Adding DOB to Personal details when not present in Aadhaar.'),
+    F('Header Revamp', ['Jiraaf Web Desktop'], 'done', '2026-02-08', '2026-02-24', 'Remade the component, fixed things. Gave KT to team.'),
+    F('Form 15G/H — Multiple Issuer Email', ['Jiraaf Web Desktop'], 'done', '2026-02-10', '2026-03-15', 'New input with chips for multiple emails. PDF form font check. Error states in Digio flow. Download confirmation design.'),
+    F('Profile Edit — Mobile & Email', ['Jiraaf Web Desktop','Jiraaf Mobile App'], 'done', '2026-02-12', '2026-03-25', 'Allowing users to edit mobile and email. Flow edits.'),
+    F('HUF KYC Flow', ['Jiraaf Web Desktop','Jiraaf Mobile App'], 'done', '2026-02-20', '2026-04-15', 'Allowing HUF to signup on Jiraaf. Full KYC flow for HUF accounts.'),
+    F('Income Certificate', ['Jiraaf Web Desktop','Jiraaf Web Mobile'], 'done', '2026-03-15', '2026-05-20', 'New income certificate section in dashboard. Updated form design. Nudge design. Email design.'),
+    F('Form 121', ['Jiraaf Web Desktop'], 'done', '2026-03-20', '2026-05-20', 'Redesigning Form 15G/H to Form 121. Multiple update rounds.'),
+    F('Figma File Restructuring', ['Jiraaf Web Desktop','Jiraaf Mobile App'], 'done', '2026-03-24', '2026-04-10', 'Redesigning how we organise Figma files.'),
+    F('FTI Homepage Redesign', ['Jiraaf Web Desktop'], 'done', '2026-04-01', '2026-05-15', 'Designing for FTIs to make the homepage more targeted towards their needs.'),
+    F('Disbursal Flow Admin', ['Jiraaf Web Desktop'], 'done', '2026-04-01', '2026-05-22', 'Refining and updating the admin disbursal flow design.'),
+    F('Design System Structuring', ['Jiraaf Web Desktop','altGraaf Web Desktop'], 'done', '2026-04-10', '2026-04-30', 'Improving devs experience by structuring the design system.'),
+    F('Trust Markers Phase 1', ['Jiraaf Web Desktop','Jiraaf Web Mobile','Jiraaf Mobile App'], 'done', '2026-04-15', '2026-05-25', 'Adding trust markers across various touchpoints on the platform (Web & App).'),
+    F('Accessibility Audit', ['Jiraaf Web Desktop','Jiraaf Mobile App','altGraaf Web Desktop'], 'in_progress', '2026-05-05', '', 'Analysis and design. Making changes to components and design system. Working with Megha, Ishita and Vishwanth to fix individual issues.'),
+    F('Trust Markers Phase 2', ['Jiraaf Web Desktop','Jiraaf Mobile App'], 'in_progress', '2026-05-10', '', 'Identifying areas and brainstorming for Phase 2.'),
+    F('Audit Requirements — FATCA', ['Jiraaf Web Desktop','Jiraaf Mobile App'], 'done', '2026-05-15', '2026-06-05', 'Adding FATCA declaration to the KYC flow and modifying relationship screens.'),
+    F('KYC Not-Done Users Homepage', ['Jiraaf Web Desktop','Jiraaf Web Mobile'], 'in_progress', '2026-06-01', '', 'Redesigning the homepage experience for users who have not completed KYC.'),
+    F('Opportunity Details Redesign v2', ['Jiraaf Web Desktop','Jiraaf Web Mobile'], 'in_progress', '2026-06-03', '', 'Full redesign of the opportunity details page.'),
+  ];
+}
+function seedIfEmpty() { if (getFeatures().length > 0) return; saveFeatures(buildSeed()); }
+
+// ── ONE-TIME IMPORT FROM FIGJAM (notes + new features + holidays) ──
+function importFigjamOnce() {
+  if (localStorage.getItem('wt_figjam_import_v1')) return;
+
+  // High-confidence holidays (public holidays + clearly-marked single days off)
+  const HOLIDAYS = {
+    '2025-10-23': 'Holiday', '2025-10-30': 'Holiday', '2025-10-31': 'Holiday',
+    '2025-12-25': 'Christmas',
+    '2026-01-01': 'New Year', '2026-01-26': 'Republic Day',
+    '2026-02-06': 'Leave', '2026-02-09': 'Leave',
+    '2026-05-01': 'Labour Day', '2026-05-07': 'Leave'
+  };
+
+  // New features for stickies that didn't map to an existing feature
+  // [name, tags, status, start, end]
+  const NEW_FEATURES = [
+    ['Create Tab view for Sell', ['Jiraaf Web Desktop'], 'done', '2025-10-22', '2025-10-22'],
+    ['Location required messaging', ['Jiraaf Web Desktop','Jiraaf Mobile App'], 'done', '2025-11-05', '2025-11-07'],
+    ['App API Loading error states', ['Jiraaf Mobile App'], 'done', '2026-02-10', '2026-02-11'],
+    ['APD Interviews (hiring)', [], 'done', '2026-02-04', '2026-02-19'],
+    ['Internal Presentation', ['Jiraaf Web Desktop'], 'done', '2026-04-13', '2026-04-13'],
+    ['Automating Internal Presentation Design', [], 'done', '2026-04-06', '2026-04-13'],
+    ['Bond Baskets', ['Jiraaf Web Desktop'], 'in_progress', '2026-04-22', '2026-04-22'],
+  ];
+
+  // Daily notes: [featureName, date, text]  (date = first day of each task span)
+  const NOTES = [
+    // OCT 2025
+    ['Jiraaf App FD Details','2025-10-21','Ideation and wireframes'],
+    ['Jiraaf App FD Details','2025-10-24','Ideation and wireframes (done)'],
+    ['Jiraaf Web FD Listing','2025-10-21','Design Approval'],
+    ['Jiraaf Web FD Listing','2025-10-24','Design Approval (done)'],
+    ['Bond Analyser Revamp','2025-10-22','Discussion and way forward (done)'],
+    ['Bond Analyser Revamp','2025-10-24','BA designs (done)'],
+    ['Bond Analyser Revamp','2025-10-28','BA designs showcase and discussion (done)'],
+    ['Unit Selection Improvements','2025-10-24','KYC-not-done users should see units — bring KYC CTA on units selection screen'],
+    ['Unit Selection Improvements','2025-10-28','Display units with min inv. value — discussion: is min investment 1/5/10 units?'],
+    ['Create Tab view for Sell','2025-10-22','Created the Sell tab view (done)'],
+    // NOV 2025
+    ['Jiraaf App FD Details','2025-11-10','Devbox'],
+    ['altGraaf FD Listing & Details','2025-11-12','Final design (done)'],
+    ['Jiraaf App FD Details','2025-11-13','Add different tenure'],
+    ['Jiraaf App FD Details','2025-11-17','Add different tenure (done)'],
+    ['altGraaf FD Listing & Details','2025-11-19','Add different tenure (done); add tabs in listing'],
+    ['Unit Selection Improvements','2025-11-04','KYC-not-done users should see units — bring KYC CTA (signed off by Rajeev)'],
+    ['Location required messaging','2025-11-05','Give Megha different message states for location-required status during KYC flow (design handed off)'],
+    ['Location required messaging','2025-11-07','Write story'],
+    ['Pending Orders','2025-11-05','Discuss with design team to see who can pick'],
+    ['Pending Orders','2025-11-12','Logic and design changes'],
+    ['Pending Orders','2025-11-18','Logic and design changes'],
+    ['Unit Selection Improvements','2025-11-14','KYC-not-done users should see units (SDI flow) (done)'],
+    ['RA Insights','2025-11-03','RA Insights ideation'],
+    ['RA Insights','2025-11-07','RA Insights discussion'],
+    ['RA Insights','2025-11-10','Hi-fi wireframing'],
+    ['RA Insights','2025-11-17','Hi-fi wireframing'],
+    // DEC 2025
+    ['Pending Orders','2025-12-01','Logic and design changes'],
+    ['RA Insights','2025-12-01','Hi-fi wireframing'],
+    ['RA Insights','2025-12-04','Hi-fi wireframing'],
+    ['RA Insights','2025-12-08','Hi-fi wireframing'],
+    ['RA Insights','2025-12-15','Hi-fi wireframing'],
+    ['RA Insights','2025-12-18','Yield X logo'],
+    ['Opportunity Details Redesign','2025-12-17','Redesign as per mobile app'],
+    ['RA Insights','2025-12-22','Yield X logo'],
+    ['RA Insights','2025-12-24','Details page'],
+    ['Opportunity Details Redesign','2025-12-24','Standardising the layout to fit mobile'],
+    ['RA Insights','2025-12-26','Details page'],
+    // JAN 2026
+    ['RA Insights Details Page','2026-01-05','Details'],
+    ['RA Insights Details Page','2026-01-09','Details'],
+    ['RA Insights Details Page','2026-01-12','Details'],
+    ['RA Insights Details Page','2026-01-15','Details'],
+    ['RA Insights Details Page','2026-01-27','Details / listing'],
+    ['RA Insights Details Page','2026-01-28','Listing card / Admin UI'],
+    ['IFA Investment Activity','2026-01-12','Different states'],
+    ['KYC Flow — DOB Addition','2026-01-14','Adding DOB to personal details when not present in Aadhaar'],
+    // FEB 2026
+    ['RA Insights Details Page','2026-02-10','Remaining bits — Admin, app design'],
+    ['RA Insights Details Page','2026-02-11','Remaining bits, making components; opportunity details adding logged-out view'],
+    ['Header Revamp','2026-02-17','Remade the component, fixed things, gave KT'],
+    ['HUF KYC Flow','2026-02-18','HUF flow discussion'],
+    ['RA Insights Details Page','2026-02-23','Finishing up remaining bits'],
+    ['App API Loading error states','2026-02-10','On different pages when cards don’t load — reworked with Lottie'],
+    ['Form 15G/H — Multiple Issuer Email','2026-02-17','Created new input with chips so users can enter multiple emails in one box'],
+    ['Form 15G/H — Multiple Issuer Email','2026-02-23','Changes: fixed form; PDF font/alignment/weight check; error states in Digio flow; dropdown reset; multiple issuer email; download confirmation'],
+    ['APD Interviews (hiring)','2026-02-04','Interview L1 with Mehek'],
+    ['APD Interviews (hiring)','2026-02-10','Interview L1 with Abha'],
+    ['APD Interviews (hiring)','2026-02-11','Interview L1 with Abha; internal discussions'],
+    ['APD Interviews (hiring)','2026-02-16','Interview L2 with Mahek'],
+    ['APD Interviews (hiring)','2026-02-19','Interview L2 with Apoorva'],
+    ['Profile Edit — Mobile & Email','2026-02-18','Allowing users to edit mobile and email'],
+    // MAR 2026
+    ['RA Insights Details Page','2026-03-02','Finishing up remaining bits'],
+    ['RA Insights Details Page','2026-03-09','Finishing up remaining bits'],
+    ['RA Insights Details Page','2026-03-17','Finishing up remaining bits'],
+    ['RA Insights Details Page','2026-03-30','Sanity check / pixel perfection'],
+    ['Design System Structuring','2026-03-10','To improve devs experience'],
+    ['Design System Structuring','2026-03-30','To improve devs experience'],
+    ['Profile Edit — Mobile & Email','2026-03-16','Flow edits'],
+    ['HUF KYC Flow','2026-03-16','Allowing HUF to signup on Jiraaf'],
+    // APR 2026
+    ['Form 121','2026-04-02','Redesigning Form 15G/H into this form'],
+    ['Income Certificate','2026-04-06','Updated form design'],
+    ['Income Certificate','2026-04-08','Introducing a section in dashboard and revising form updates'],
+    ['Form 121','2026-04-09','Updates'],
+    ['Form 121','2026-04-13','Updates'],
+    ['Income Certificate','2026-04-16','Introducing a section in dashboard and revising form updates'],
+    ['Form 121','2026-04-16','Updates'],
+    ['Income Certificate','2026-04-20','Introducing a section in dashboard and revising form updates'],
+    ['Income Certificate','2026-04-27','Email design'],
+    ['Internal Presentation','2026-04-13','Using Claude for this'],
+    ['FTI Homepage Redesign','2026-04-22','Designing for FTIs to make the homepage more targeted to their needs'],
+    ['FTI Homepage Redesign','2026-04-27','Designing for FTIs to make the homepage more targeted to their needs'],
+    ['Trust Markers Phase 1','2026-04-29','Adding trust markers across touchpoints (Web & App)'],
+    ['Bond Baskets','2026-04-22','Discussion'],
+    ['Disbursal Flow Admin','2026-04-24','Refining the design'],
+    ['Disbursal Flow Admin','2026-04-27','Refining the design'],
+    ['Disbursal Flow Admin','2026-04-29','Updating the designs'],
+    ['Figma File Restructuring','2026-04-06','Redesigning how we organise Figma files'],
+    ['Automating Internal Presentation Design','2026-04-06','Exploring Claude & Gamma to create the internal presentations we do'],
+    ['Automating Internal Presentation Design','2026-04-08','Exploring Claude to increase efficiency for internal presentations'],
+    ['Automating Internal Presentation Design','2026-04-13','Exploring Claude & Gamma to create the internal presentations we do'],
+    // MAY 2026
+    ['Income Certificate','2026-05-04','Nudge design'],
+    ['Form 121','2026-05-04','Devbox'],
+    ['Income Certificate','2026-05-08','Devbox'],
+    ['Income Certificate','2026-05-12','Fixing UI issue'],
+    ['Trust Markers Phase 1','2026-05-04','Adding trust markers across touchpoints (Web & App)'],
+    ['Trust Markers Phase 2','2026-05-08','Identifying areas'],
+    ['Trust Markers Phase 2','2026-05-15','Brainstorming'],
+    ['Accessibility Audit','2026-05-18','Analysis and design; changes to designs/components/design system; working with Megha, Ishita & Vishwanth'],
+    ['Accessibility Audit','2026-05-25','Continuing analysis and component changes'],
+    ['Disbursal Flow Admin','2026-05-04','Making changes'],
+    ['Audit Requirements — FATCA','2026-05-13','Adding FATCA declaration to KYC flow and modifying relationship screens'],
+    ['Design System Structuring','2026-05-30','Structuring the design system'],
+    // JUN 2026
+    ['Accessibility Audit','2026-06-01','Changes to designs/components/design system; working with Vishwanth on individual issues'],
+    ['Accessibility Audit','2026-06-03','Devbox'],
+    ['KYC Not-Done Users Homepage','2026-06-03','Redesigning the homepage experience for users who haven’t completed KYC'],
+    ['KYC Not-Done Users Homepage','2026-06-08','Redesigning the homepage experience for users who haven’t completed KYC'],
+    ['Opportunity Details Redesign v2','2026-06-03','Redesigning the details page'],
+    ['Design System Structuring','2026-06-02','Structuring the design system'],
+  ];
+
+  // 1) holidays
+  const holidays = getHolidays();
+  Object.assign(holidays, HOLIDAYS);
+  saveHolidays(holidays);
+
+  // 2) new features (skip if a feature with that name already exists)
+  const features = getFeatures();
+  const byName = new Map(features.map(f => [f.name, f]));
+  NEW_FEATURES.forEach(([name, tags, status, start, end]) => {
+    if (byName.has(name)) return;
+    const nf = { id: uid(), name, tags, status, blocks: normalizeBlocks([{ id: uid(), start, end }]), dayNotes: {}, notes: '', createdAt: start + 'T09:00:00Z' };
+    features.push(nf);
+    byName.set(name, nf);
+  });
+
+  // 3) notes (overwrite); ensure the feature has a block covering the note date
+  NOTES.forEach(([name, date, text]) => {
+    const f = byName.get(name);
+    if (!f) return;
+    if (!f.dayNotes) f.dayNotes = {};
+    f.dayNotes[date] = text;
+    if (!Array.isArray(f.blocks)) f.blocks = [];
+    const covered = f.blocks.some(b => b.start && b.start <= date && (b.end||b.start) >= date);
+    if (!covered && !isWeekend(date) && !holidays[date]) f.blocks.push({ id: uid(), start: date, end: date });
+  });
+
+  // 4) re-split everyone's blocks around weekends + the new holidays
+  features.forEach(f => { f.blocks = normalizeBlocks(f.blocks); });
+  saveFeatures(features);
+  localStorage.setItem('wt_figjam_import_v1', '1');
+}
+
+// ── INIT ─────────────────────────────────────────────────
+seedIfEmpty();
+migrateFeatures();
+restoreSeedOnce();
+splitWeekendsOnce();
+importFigjamOnce();
+renderToday();
+</script>
+</body>
+</html>

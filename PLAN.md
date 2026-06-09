@@ -57,10 +57,10 @@ User can add custom tags at any time (e.g. `Design System`, `KYC`, `RA Insights`
 ```
 index.html
   ├── <head>        CSS variables, reset, typography
-  ├── <nav>         Top navigation (Today / Log / Timeline)
+  ├── <nav>         Top navigation (Timeline / Today / Log)
+  ├── #timeline     Timeline / Gantt view (default landing)
   ├── #today        Today view
   ├── #log          Feature Log view
-  ├── #timeline     Timeline / Gantt view
   ├── #modal        Add / Edit feature modal (shared)
   └── <script>      All JS — data layer, rendering, interactions
 ```
@@ -71,7 +71,7 @@ No external dependencies. Pure HTML, CSS, JS.
 
 ## Views
 
-### 1. Today View (default landing)
+### 1. Today View
 **Purpose:** Answer "what am I working on right now?"
 
 **Contents:**
@@ -108,7 +108,7 @@ No external dependencies. Pure HTML, CSS, JS.
 
 ---
 
-### 3. Timeline / Gantt View
+### 3. Timeline / Gantt View (default landing)
 **Purpose:** Visual calendar showing all features across time.
 
 **Contents:**

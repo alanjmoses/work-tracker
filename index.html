@@ -235,14 +235,14 @@
 <nav>
   <span class="nav-logo"><span class="nav-logo-dot"></span>Work Tracker</span>
   <div class="nav-tabs">
-    <button class="nav-tab active" data-view="today">Today</button>
+    <button class="nav-tab active" data-view="timeline">Timeline</button>
+    <button class="nav-tab" data-view="today">Today</button>
     <button class="nav-tab" data-view="log">Log</button>
-    <button class="nav-tab" data-view="timeline">Timeline</button>
   </div>
 </nav>
 
 <!-- TODAY VIEW -->
-<div id="view-today" class="view active">
+<div id="view-today" class="view">
   <div class="page-header">
     <h1 class="page-title">Today</h1>
     <span class="page-count" id="today-count">0 in progress</span>
@@ -271,7 +271,7 @@
 </div>
 
 <!-- TIMELINE VIEW -->
-<div id="view-timeline" class="view">
+<div id="view-timeline" class="view active">
   <div class="timeline-controls">
     <div class="timeline-nav">
       <button class="icon-btn" id="tl-prev">&#8592;</button>
@@ -518,7 +518,7 @@ function splitWeekendsOnce() {
 }
 
 // ── NAV ─────────────────────────────────────────────────
-let currentView = 'today';
+let currentView = 'timeline';
 document.querySelectorAll('.nav-tab').forEach(tab => {
   tab.addEventListener('click', () => {
     currentView = tab.dataset.view;

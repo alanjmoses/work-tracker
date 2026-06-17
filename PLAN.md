@@ -32,7 +32,8 @@ Holidays behave like weekends: shaded (amber, vs weekend grey), excluded from da
 > - **Blocks don't span weekends — but weekend work can be logged explicitly.** A block that *spans* Sat/Sun is split into weekday runs — Thu→Tue becomes Thu–Fri + Mon–Tue (`normalizeBlocks`), so a dragged span never silently counts the weekend. **Exception:** a block made entirely of weekend days (you *clicked* a Sat/Sun) is kept intact — that's intentional weekend work. Weekends show as shaded columns either way. Split is applied as a one-time pass to existing data (`splitWeekendsOnce`, flag `wt_split_weekends_v1`) and on every drag/modal-save; it never strips a standalone weekend block.
 > - **Days worked = distinct days across all blocks** (`featureWorkedDays`). Weekends only appear in blocks when explicitly added, so they only count when you meant them to.
 > - On the Timeline you draw/edit blocks directly: **click any day (incl. weekends) to drop a block**, drag edges to resize, drag the body to move, hover + × to delete. Dragging a block across a weekend auto-splits it. Blocks are also editable as rows in the feature modal.
-> - **Per-day notes** (`dayNotes`) are added by clicking a block (or via the Today card's inline field).
+> - **Per-day notes** (`dayNotes`) are added by clicking a block (or via the Today card's inline field). Saving a note from the Today card also ensures a work block covers today (same as the Day modal), so the note always shows on the Timeline and counts as a worked day.
+- **Working on a holiday never deletes the holiday.** Saving a Working day (single or dragged range) keeps the global holiday marked; a standalone block on the holiday is kept (like weekend work), and a range spanning a holiday splits around it.
 > - `migrateFeatures()` is idempotent and auto-converts legacy records on load: stages → start/end → one block; an older single start/end → one block (ongoing features get an end of *today*). No data lost.
 > - **Deletes are guarded:** every delete (feature, block, daily note, block-row) goes through a confirmation dialog, then an **undo toast** (6s). Reversible via a full-snapshot restore.
 > - **`restoreSeedOnce()`** runs one time per browser (guarded by `wt_restored_v1`): it re-adds any seed feature missing *by name*, to recover an accidental wipe. It will not duplicate kept features and will not fight intentional deletes after that first run.
@@ -117,6 +118,8 @@ No external dependencies. Pure HTML, CSS, JS.
 - Month/quarter toggle at the top (default: current month)
 - Left column: each row stacks three blocks: (1) brand badges on their own line, (2) feature name (wraps to multiple lines if long), (3) a single subtitle line `Nd worked | PM: <name>` (PM segment omitted when not set). Tags are collapsed to small **brand badges** (one Jiraaf or altGraaf SVG per unique brand) plus a `+N` badge for any custom tags. Hovering (or keyboard-focusing) the badge cluster reveals a popover with the full chip list. Today / Log views still show full chips.
 - Features with status `done` sort to the **bottom** of the row order so active and on-hold work is closer to the top of the view.
+- **In-progress features always get a row**, even when they have no block in the visible period — so on the 1st of a new month you can click a day and log work without opening the edit modal. Done/on-hold features only appear when a block overlaps the period.
+- All block interactions use **Pointer Events**, so moving/resizing blocks also works on touch devices (blocks set `touch-action: none`; empty cells still allow touch-scrolling, and a tap on a cell opens the Day modal).
 - **Add Feature affordance:** a thin row at the bottom of the gantt table that's transparent at rest and reveals a `+ Add feature` bar on hover. Click it to open the Add Feature modal. (Replaces the old floating + button — Today/Log views no longer have an inline add affordance; switch to Timeline to add.)
 - Right: horizontal canvas (div grid, fixed **96px/day**) — each feature gets one row
   - Day headers show **weekday abbrev + day number** stacked ("Mon" / "1").
@@ -146,7 +149,7 @@ No external dependencies. Pure HTML, CSS, JS.
 - Actions: Save / Cancel / Delete (on edit only)
 
 A **Day modal** opens from the Timeline whenever you click a day (cell or block). It has a **Working / Holiday** toggle:
-- **Working** (default): a "what did you do?" log box. Saving stores the note and ensures a work block exists on that day. If the clicked day is inside an existing block, a **Delete** button removes the entire block (notes kept) — replacing the old hover-× on the bar.
+- **Working** (default): a "what did you do?" log box plus a **Feature status** segmented control (In Progress / Done / On Hold, pre-set to the feature's current status) — so a block drawn on the Timeline can be marked done in the same step. Saving stores the note, applies the status, and ensures a work block exists on that day. If the clicked day is inside an existing block, a **Delete** button removes the entire block (notes kept) — replacing the old hover-× on the bar.
 - **Holiday**: a reason field + a From/To range. Saving marks every weekday in the range as a global holiday and re-splits all features' blocks around the new holidays. Deletes go through confirm + undo toast like everything else.
 
 **Validation:**
@@ -161,10 +164,12 @@ A **Day modal** opens from the Timeline whenever you click a day (cell or block)
 - **Modals:** centered on the viewport, capped at `max-height: 85vh` with internal scroll if content overflows. Press **Esc** to close any open modal (also closes the Timeline info popover).
 - **Modal:** Opens over current view, closes on Save / Cancel / outside click
 - **Inline editing:** Clicking a feature name anywhere opens the edit modal
-- **Mark as Done:** Quick action on Today cards — sets status to `done`, sets end date of last open stage to today if not already set
+- **Mark as Done:** Quick action on Today cards — sets status to `done`
 - **Delete:** Confirmation prompt before removing a feature
 - **Tag management:** Adding a new tag in the modal saves it to the global tag list immediately
 - **Persistence:** Every save/delete writes to `localStorage` instantly — no explicit save button for the app itself
+- **Multi-tab:** a `storage` listener re-renders when another tab changes the data
+- **Export / Import (nav bar):** Export downloads a JSON backup (`work-tracker-backup-YYYY-MM-DD.json` with features, tags, holidays, version, exportedAt). Import reads a backup file, validates it, confirms, then **replaces** all data (undo toast offered). Import also sets the one-time migration flags so seed/backfill routines don't re-run over imported data.
 
 ---
 
@@ -268,4 +273,3 @@ Each feature's PM, inferred from the workstream it sat under in the FigJam roadm
 - Multi-user / auth
 - Notifications or reminders
 - Hour-level time tracking
-- Export / import (can add later)

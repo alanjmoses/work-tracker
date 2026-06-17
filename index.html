@@ -20,19 +20,15 @@
     --amber: #F5A623;
     --red: #E5484D;
     --week-divider: #D2C9BB;
-    --weekend: rgba(60,50,35,0.07);
-    --holiday: rgba(245,166,35,0.16);
+    --weekend: rgba(60,50,35,0.16);
+    --holiday: rgba(245,166,35,0.30);
 
     --status-inprogress: #7B61FF;
     --status-done: #1BC47D;
-    --status-onhold: #F5A623;
+    --status-onhold: #EAB308;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; scrollbar-width: thin; scrollbar-color: rgba(60,50,35,0.28) transparent; }
-  ::-webkit-scrollbar { width: 7px; height: 7px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: rgba(60,50,35,0.28); border-radius: 4px; }
-  ::-webkit-scrollbar-thumb:hover { background: rgba(60,50,35,0.45); }
   ::-webkit-scrollbar-corner { background: transparent; }
 
   body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; min-height: 100vh; }
@@ -41,6 +37,11 @@
   nav { display: flex; align-items: center; justify-content: space-between; padding: 0 28px; height: 56px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--surface); z-index: 100; box-shadow: 0 1px 0 var(--border-light); }
   .nav-logo { font-weight: 800; font-size: 15px; letter-spacing: -0.4px; color: var(--text); display: flex; align-items: center; gap: 8px; }
   .nav-logo-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); display: inline-block; }
+  .nav-right { display: flex; align-items: center; gap: 14px; }
+  .nav-divider { width: 1px; height: 22px; background: var(--border); }
+  .nav-actions { display: flex; gap: 6px; }
+  .nav-action { padding: 6px 11px; border-radius: 8px; cursor: pointer; background: none; border: 1px solid var(--border); color: var(--text-muted); font-size: 12px; font-weight: 600; font-family: inherit; transition: all 0.15s; }
+  .nav-action:hover { color: var(--text); background: var(--surface2); }
   .nav-tabs { display: flex; gap: 2px; }
   .nav-tab { padding: 6px 16px; border-radius: 8px; cursor: pointer; color: var(--text); background: var(--surface2); font-size: 13px; font-weight: 500; transition: all 0.15s; border: none; }
   .nav-tab:hover { background: #E8E4DC; }
@@ -95,7 +96,7 @@
   .status-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.4px; }
   .status-badge.in_progress { background: rgba(123,97,255,0.1); color: var(--status-inprogress); }
   .status-badge.done { background: rgba(27,196,125,0.1); color: var(--status-done); }
-  .status-badge.on_hold { background: rgba(245,166,35,0.12); color: var(--status-onhold); }
+  .status-badge.on_hold { background: rgba(234,179,8,0.14); color: var(--status-onhold); }
 
   .filters { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 24px; align-items: center; }
   .filter-select, .filter-input { background: var(--surface); border: 1px solid var(--border); color: var(--text); padding: 8px 12px; border-radius: 8px; font-size: 13px; outline: none; transition: border-color 0.15s; font-family: inherit; }
@@ -147,7 +148,6 @@
   .legend-dot { width: 10px; height: 10px; border-radius: 3px; }
   .legend-weekend { width: 14px; height: 14px; border-radius: 3px; background: var(--weekend); border: 1px solid var(--border); }
   .legend-holiday { width: 14px; height: 14px; border-radius: 3px; background: var(--holiday); border: 1px solid var(--border); }
-  .legend-notedot { width: 8px; height: 8px; border-radius: 50%; background: var(--text); }
   .info-wrap { position: relative; }
   .info-btn { background: var(--surface); border: 1px solid var(--border); color: var(--text-muted); width: 30px; height: 30px; border-radius: 50%; cursor: pointer; font-size: 13px; font-weight: 700; font-style: italic; display: flex; align-items: center; justify-content: center; transition: all 0.15s; font-family: Georgia, serif; }
   .info-btn:hover { background: var(--surface2); color: var(--text); border-color: #C8C0B4; }
@@ -157,7 +157,7 @@
   .info-popover[hidden] { display: none; }
 
   .gantt-wrap { overflow: auto; max-height: calc(100vh - 200px); border: 1px solid var(--border); border-radius: 14px; background: var(--surface); box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
-  .gantt-grid { min-width: 100%; }
+  .gantt-grid { width: max-content; min-width: 100%; }
   .g-headers { position: sticky; top: 0; z-index: 11; background: var(--surface); }
   .g-row { display: flex; border-bottom: 1px solid var(--border-light); }
   .g-row:last-child { border-bottom: none; }
@@ -168,6 +168,22 @@
   .g-name .g-subtitle { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
   .g-name .tags-row { margin: 5px 0 0; }
   .g-name .tags-collapsed { margin: 0 0 4px; align-self: flex-start; }
+  .g-name { cursor: grab; }
+  .g-name:hover .g-drag-handle { opacity: 0.55; }
+  .g-drag-handle { position: absolute; top: 50%; right: 6px; transform: translateY(-50%); font-size: 13px; line-height: 1; color: var(--text-muted); opacity: 0; transition: opacity 0.15s; pointer-events: none; user-select: none; letter-spacing: -1px; }
+  .g-feature-row.row-dragging { position: relative; z-index: 30; opacity: 0.97; background: var(--surface); box-shadow: 0 10px 28px rgba(0,0,0,0.18); pointer-events: none; transition: box-shadow 0.12s ease; will-change: transform; }
+  .g-feature-row.row-dragging .g-name { cursor: grabbing; background: var(--surface); }
+  .g-feature-row.row-dragging .g-drag-handle { opacity: 0.8; }
+  /* Live reorder: other rows slide to open a gap as the dragged row moves over them */
+  .gantt-grid.reordering .g-feature-row:not(.row-dragging) { transition: transform 0.18s ease; }
+  /* Glow on the row that was just moved, so its new position is easy to spot */
+  @keyframes rowMovedGlow {
+    0%   { box-shadow: 0 0 0 0 rgba(123,97,255,0); }
+    18%  { box-shadow: 0 0 0 3px rgba(123,97,255,0.55), 0 0 20px 5px rgba(123,97,255,0.45); }
+    100% { box-shadow: 0 0 0 0 rgba(123,97,255,0); }
+  }
+  .g-feature-row.row-moved { position: relative; z-index: 20; border-radius: 6px; animation: rowMovedGlow 1.25s ease-out; }
+  .g-feature-row.row-moved .g-name { background: var(--surface); }
   .tags-collapsed { position: relative; display: inline-flex; gap: 5px; align-items: center; outline: none; cursor: default; }
   .brand-badge { height: 16px; width: 16px; display: block; object-fit: contain; }
   .tags-more { font-size: 10px; font-weight: 600; color: var(--text-muted); background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 1px 6px; line-height: 1.4; }
@@ -193,7 +209,7 @@
   .g-dayhdr.weekend { color: #B5651D; background: var(--weekend); }
   .g-dayhdr.holiday { color: var(--amber); background: var(--holiday); }
 
-  .g-block { position: absolute; height: 64px; top: 8px; border-radius: 6px; color: #fff; cursor: grab; z-index: 2; user-select: none; opacity: 0.93; box-shadow: 0 1px 3px rgba(0,0,0,0.15); overflow: hidden; }
+  .g-block { position: absolute; height: 64px; top: 8px; border-radius: 6px; color: #fff; cursor: grab; z-index: 2; user-select: none; opacity: 0.93; box-shadow: 0 1px 3px rgba(0,0,0,0.15); overflow: hidden; touch-action: none; }
   .g-block-ghost { position: absolute; height: 64px; top: 8px; border-radius: 6px; background: rgba(123,97,255,0.28); border: 2px dashed rgba(123,97,255,0.7); z-index: 1; pointer-events: none; }
   .g-block:hover { opacity: 1; }
   .g-block:active { cursor: grabbing; }
@@ -218,10 +234,10 @@
   .field-hint { font-size: 11px; color: var(--text-muted); margin-top: 5px; line-height: 1.5; }
 
   .status-toggle { display: flex; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
-  .status-option { flex: 1; padding: 9px; text-align: center; cursor: pointer; font-size: 12px; font-weight: 600; transition: all 0.15s; border: none; background: none; color: var(--text-muted); font-family: inherit; }
-  .status-option.active[data-value="in_progress"] { background: rgba(123,97,255,0.12); color: var(--status-inprogress); }
-  .status-option.active[data-value="done"] { background: rgba(27,196,125,0.12); color: var(--status-done); }
-  .status-option.active[data-value="on_hold"] { background: rgba(245,166,35,0.12); color: var(--status-onhold); }
+  .status-option, .day-status-option { flex: 1; padding: 9px; text-align: center; cursor: pointer; font-size: 12px; font-weight: 600; transition: all 0.15s; border: none; background: none; color: var(--text-muted); font-family: inherit; }
+  .status-option.active[data-value="in_progress"], .day-status-option.active[data-value="in_progress"] { background: rgba(123,97,255,0.12); color: var(--status-inprogress); }
+  .status-option.active[data-value="done"], .day-status-option.active[data-value="done"] { background: rgba(27,196,125,0.12); color: var(--status-done); }
+  .status-option.active[data-value="on_hold"], .day-status-option.active[data-value="on_hold"] { background: rgba(234,179,8,0.14); color: var(--status-onhold); }
 
   .day-type-option { flex: 1; padding: 9px; text-align: center; cursor: pointer; font-size: 12px; font-weight: 600; transition: all 0.15s; border: none; background: none; color: var(--text); font-family: inherit; }
   .day-type-option.active[data-type="working"] { background: var(--accent); color: #fff; }
@@ -261,10 +277,18 @@
 
 <nav>
   <span class="nav-logo"><span class="nav-logo-dot"></span>Work Tracker</span>
-  <div class="nav-tabs">
-    <button class="nav-tab active" data-view="timeline">Timeline</button>
-    <button class="nav-tab" data-view="today">Today</button>
-    <button class="nav-tab" data-view="log">Log</button>
+  <div class="nav-right">
+    <div class="nav-tabs">
+      <button class="nav-tab active" data-view="timeline">Timeline</button>
+      <button class="nav-tab" data-view="today">Today</button>
+      <button class="nav-tab" data-view="log">Log</button>
+    </div>
+    <span class="nav-divider"></span>
+    <div class="nav-actions">
+      <button class="nav-action" id="export-btn" title="Download a JSON backup of all data">Export</button>
+      <button class="nav-action" id="import-btn" title="Restore data from a JSON backup">Import</button>
+      <input type="file" id="import-file" accept=".json,application/json" hidden>
+    </div>
   </div>
 </nav>
 
@@ -398,6 +422,14 @@
         <textarea class="form-textarea" id="day-note-input" placeholder="e.g. Built the empty states and shared with Ganesh for review" style="min-height:110px"></textarea>
         <p class="field-hint">Saving marks this day as worked on this feature.</p>
       </div>
+      <div class="form-group">
+        <label class="form-label">Feature status</label>
+        <div class="status-toggle">
+          <button class="day-status-option" data-value="in_progress">In Progress</button>
+          <button class="day-status-option" data-value="done">Done</button>
+          <button class="day-status-option" data-value="on_hold">On Hold</button>
+        </div>
+      </div>
     </div>
 
     <div id="day-holiday-section" style="display:none">
@@ -444,7 +476,7 @@ const DEFAULT_TAGS = [
   'Jiraaf Web Desktop','Jiraaf Web Mobile','Jiraaf Mobile App',
   'altGraaf Web Desktop','altGraaf Web Mobile','altGraaf Mobile App'
 ];
-const STATUS_COLORS = { in_progress: '#7B61FF', done: '#1BC47D', on_hold: '#F5A623' };
+const STATUS_COLORS = { in_progress: '#7B61FF', done: '#1BC47D', on_hold: '#EAB308' };
 const DAY_W = 96; // px per weekday column
 
 // ── DATA LAYER ──────────────────────────────────────────
@@ -464,12 +496,9 @@ function daysBetween(a, b) { return Math.round((parseISO(b) - parseISO(a)) / 864
 function addDays(ds, n) { const d = parseISO(ds); d.setDate(d.getDate() + n); return localISO(d); }
 function daysAgo(d) { return daysBetween(d, today()); }
 function isWeekend(ds) { const g = parseISO(ds).getDay(); return g === 0 || g === 6; }
-function countWeekdays(a, b) { let c = a, n = 0; while (c <= b) { if (!isWeekend(c)) n++; c = addDays(c, 1); } return n; }
-function shiftWeekdays(ds, n) { if (!n) return ds; const step = n > 0 ? 1 : -1; let rem = Math.abs(n), c = ds; while (rem > 0) { c = addDays(c, step); if (!isWeekend(c)) rem--; } return c; }
 // holidays: { 'YYYY-MM-DD': 'reason' } — global, non-working like weekends
 function getHolidays() { return load('wt_holidays', {}); }
 function saveHolidays(h) { save('wt_holidays', h); }
-function isHoliday(ds) { return !!getHolidays()[ds]; }
 function formatDate(d) { if (!d) return '—'; return parseISO(d).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' }); }
 function formatDateShort(d) { if (!d) return '—'; return parseISO(d).toLocaleDateString('en-GB', { day:'numeric', month:'short' }); }
 
@@ -609,7 +638,13 @@ function saveTodayNote(id, value, el) {
   if (!f.dayNotes) f.dayNotes = {};
   const t = today();
   const v = value.trim();
-  if (v) f.dayNotes[t] = v; else delete f.dayNotes[t];
+  if (v) {
+    f.dayNotes[t] = v;
+    // a note means today was worked — make sure a block covers it (same as the Day modal)
+    if (!Array.isArray(f.blocks)) f.blocks = [];
+    const covered = f.blocks.some(b => b.start && b.start <= t && (b.end||b.start) >= t);
+    if (!covered) { f.blocks.push({ id: uid(), start: t, end: t }); f.blocks = normalizeBlocks(f.blocks); }
+  } else delete f.dayNotes[t];
   saveFeatures(features);
   if (el) { el.classList.add('saved'); setTimeout(() => el.classList.remove('saved'), 1000); }
 }
@@ -702,7 +737,7 @@ function populateLogFilters(all) {
   const years = [...new Set(all.flatMap(f => { const s = featureStart(f); return s ? [s.slice(0,4)] : []; }))].sort().reverse();
   const tagSel = document.getElementById('log-tag');
   const cv = tagSel.value;
-  tagSel.innerHTML = '<option value="">All tags</option>' + tags.map(t=>`<option value="${t}">${t}</option>`).join('');
+  tagSel.innerHTML = '<option value="">All tags</option>' + tags.map(t=>`<option value="${escapeAttr(t)}">${escapeHTML(t)}</option>`).join('');
   tagSel.value = cv;
   const yearSel = document.getElementById('log-year');
   const cy = yearSel.value;
@@ -750,7 +785,7 @@ function renderTimeline() {
   const tags = getTags();
   const tlTagSel = document.getElementById('tl-tag-filter');
   const curTagVal = tlTagSel.value;
-  tlTagSel.innerHTML = '<option value="">All tags</option>' + tags.map(t=>`<option value="${t}">${t}</option>`).join('');
+  tlTagSel.innerHTML = '<option value="">All tags</option>' + tags.map(t=>`<option value="${escapeAttr(t)}">${escapeHTML(t)}</option>`).join('');
   tlTagSel.value = curTagVal;
 
   document.getElementById('tl-legend').innerHTML =
@@ -763,8 +798,9 @@ function renderTimeline() {
   const tagFilter = tlTagSel.value;
   if (tagFilter) features = features.filter(f => f.tags.includes(tagFilter));
   const pStart = localISO(start), pEnd = localISO(end);
-  features = features.filter(f => (f.blocks||[]).some(b => b.start && b.start <= pEnd && (b.end||b.start) >= pStart));
-  features = features.slice().sort((a, b) => (a.status === 'done' ? 1 : 0) - (b.status === 'done' ? 1 : 0));
+  // in-progress features always get a row (so you can log work in a fresh month); others only when they have blocks in view
+  features = features.filter(f => f.status === 'in_progress' || (f.blocks||[]).some(b => b.start && b.start <= pEnd && (b.end||b.start) >= pStart));
+  // Rows stay in their stored order (order added, or as manually reordered by dragging the Feature cell). No status-based sorting.
 
   const grid = document.getElementById('gantt-grid');
   const addRowHTML = `<div class="g-add-row" onclick="openAdd()" title="Add a new feature"><span class="add-icon">+</span> Add feature</div>`;
@@ -815,7 +851,7 @@ function renderTimeline() {
       if (isW) cls += ' weekend';
       if (hol) cls += ' holiday';
       const tip = hol ? formatDate(ds) + ' — Holiday: ' + escapeAttr(hol) : formatDate(ds) + (hasNote ? ' — ' + escapeAttr(f.dayNotes[ds]) : '');
-      return `<div class="${cls}" style="width:${DAY_W}px" onmousedown="cellDown(event,'${f.id}','${ds}')" title="${tip}"></div>`;
+      return `<div class="${cls}" style="width:${DAY_W}px" onpointerdown="cellDown(event,'${f.id}','${ds}')" title="${tip}"></div>`;
     }).join('');
 
     let blocks = '';
@@ -846,7 +882,7 @@ function renderTimeline() {
         segsHtml += `<div class="g-block-seg" style="left:${segLeftPx}px;width:${segWPx}px" title="${escapeAttr(noteText)}">${escapeHTML(noteText)}</div>`;
       }
 
-      blocks += `<div class="g-block" id="blk-${b.id}" style="left:${left}px;width:${width}px;background:${STATUS_COLORS[f.status]||'#aaa'}" onmousedown="blockDown(event,'${f.id}','${b.id}')" title="${formatDate(b.start)} → ${formatDate(bEnd)} · ${dayCount} day${dayCount!==1?'s':''}">
+      blocks += `<div class="g-block" id="blk-${b.id}" style="left:${left}px;width:${width}px;background:${STATUS_COLORS[f.status]||'#aaa'}" onpointerdown="blockDown(event,'${f.id}','${b.id}')" title="${formatDate(b.start)} → ${formatDate(bEnd)} · ${dayCount} day${dayCount!==1?'s':''}">
         <div class="g-handle l" data-h="l"></div>
         ${segsHtml}
         <div class="g-handle r" data-h="r"></div>
@@ -862,8 +898,9 @@ function renderTimeline() {
       ? `<div class="tags-collapsed" tabindex="0">${brands.map(b => `<img class="brand-badge" src="Assets/Icons/${b}_Symbol.svg" alt="${b}">`).join('')}${customCount > 0 ? `<span class="tags-more">+${customCount}</span>` : ''}<div class="tags-popover">${f.tags.map(t => tagChipHTML(t)).join('')}</div></div>`
       : '';
     const metaLine = `${workedDays}d worked${f.pm ? ` | PM: ${escapeHTML(f.pm)}` : ''}`;
-    html += `<div class="g-row g-feature-row">
-      <div class="g-name">
+    html += `<div class="g-row g-feature-row" data-fid="${f.id}">
+      <div class="g-name" onpointerdown="rowDragDown(event,'${f.id}')" title="Drag to reorder">
+        <span class="g-drag-handle" aria-hidden="true">⠿</span>
         ${collapsedTags}
         <span class="feat-name" onclick="openEdit('${f.id}')">${escapeHTML(f.name)}</span>
         <div class="g-subtitle">${metaLine}</div>
@@ -875,19 +912,6 @@ function renderTimeline() {
   grid.innerHTML = html + addRowHTML;
 }
 
-function delBlock(e, fid, bid) {
-  e.stopPropagation();
-  confirmDialog('Delete this work block? Daily notes on those days are kept.', () => {
-    const snapshot = getFeatures();
-    const features = getFeatures();
-    const f = features.find(x => x.id === fid);
-    if (f) f.blocks = (f.blocks||[]).filter(b => b.id !== bid);
-    saveFeatures(features);
-    renderTimeline();
-    showToast('Block deleted', () => { saveFeatures(snapshot); renderView(); });
-  });
-}
-
 // ── CELL DRAG (create new block by dragging across days) ─
 let cellDragState = null;
 function cellDown(e, fid, date) {
@@ -896,7 +920,7 @@ function cellDown(e, fid, date) {
   const trackEl = e.currentTarget.parentElement;
   cellDragState = { fid, startDate: date, endDate: date, startX: e.clientX, moved: false, trackEl, ghost: null };
 }
-document.addEventListener('mousemove', e => {
+document.addEventListener('pointermove', e => {
   if (!cellDragState) return;
   const rect = cellDragState.trackEl.getBoundingClientRect();
   let idx = Math.floor((e.clientX - rect.left) / DAY_W);
@@ -918,7 +942,7 @@ document.addEventListener('mousemove', e => {
     cellDragState.ghost.style.width = ((eIdx - sIdx + 1) * DAY_W) + 'px';
   }
 });
-document.addEventListener('mouseup', () => {
+document.addEventListener('pointerup', () => {
   if (!cellDragState) return;
   const ds = cellDragState;
   cellDragState = null;
@@ -932,7 +956,6 @@ document.addEventListener('mouseup', () => {
 // ── BLOCK DRAG (move / resize), weekday-aware ───────────
 let dragState = null;
 function blockDown(e, fid, bid) {
-  if (e.target.dataset.del) return;
   const f = getFeatures().find(x => x.id === fid);
   const b = f && (f.blocks||[]).find(x => x.id === bid);
   if (!b) return;
@@ -941,7 +964,7 @@ function blockDown(e, fid, bid) {
   dragState = { fid, bid, mode, moved: false, startX: e.clientX, origStart: b.start, origEnd: b.end || b.start, newStart: b.start, newEnd: b.end || b.start, el: document.getElementById('blk-' + bid) };
 }
 
-document.addEventListener('mousemove', e => {
+document.addEventListener('pointermove', e => {
   if (!dragState) return;
   const dx = e.clientX - dragState.startX;
   if (Math.abs(dx) > 3) dragState.moved = true;
@@ -959,7 +982,7 @@ document.addEventListener('mousemove', e => {
   }
 });
 
-document.addEventListener('mouseup', () => {
+document.addEventListener('pointerup', () => {
   if (!dragState) return;
   const ds = dragState; dragState = null;
   if (ds.moved) {
@@ -979,8 +1002,111 @@ document.addEventListener('mouseup', () => {
   }
 });
 
-document.getElementById('tl-prev').addEventListener('click', () => { tlRange === 'month' ? tlAnchor.setMonth(tlAnchor.getMonth()-1) : tlAnchor.setMonth(tlAnchor.getMonth()-3); renderTimeline(); });
-document.getElementById('tl-next').addEventListener('click', () => { tlRange === 'month' ? tlAnchor.setMonth(tlAnchor.getMonth()+1) : tlAnchor.setMonth(tlAnchor.getMonth()+3); renderTimeline(); });
+// touch scroll / window blur mid-drag: abandon cleanly
+document.addEventListener('pointercancel', () => {
+  if (cellDragState) { if (cellDragState.ghost) cellDragState.ghost.remove(); cellDragState = null; }
+  if (dragState) { dragState = null; renderTimeline(); }
+  if (rowDrag) { clearRowDrag(); }
+});
+
+// ── ROW DRAG (reorder feature rows via the Feature column) ──
+let rowDrag = null;
+let suppressNextRowClick = false;
+function resetRowShifts() {
+  if (rowDrag && rowDrag.rows) rowDrag.rows.forEach((el, i) => { if (i !== rowDrag.fromIndex) el.style.transform = ''; });
+}
+function clearRowDrag() {
+  if (!rowDrag) return;
+  if (rowDrag.gridEl) rowDrag.gridEl.classList.remove('reordering');
+  if (rowDrag.rowEl) { rowDrag.rowEl.classList.remove('row-dragging'); rowDrag.rowEl.style.transform = ''; }
+  resetRowShifts();
+  rowDrag = null;
+}
+function rowDragDown(e, fid) {
+  // Don't hijack interactions on the name (openEdit) or the tags popover — only the cell background starts a drag.
+  if (e.target.closest('.feat-name, .tags-collapsed')) return;
+  const rowEl = e.target.closest('.g-feature-row');
+  if (!rowEl) return;
+  const gridEl = document.getElementById('gantt-grid');
+  const rows = [...gridEl.querySelectorAll('.g-feature-row')];
+  suppressNextRowClick = false;
+  // Capture each row's midpoint ONCE, while everything is static. Detection compares the cursor to
+  // these fixed positions — never to the rows as they animate — which avoids boundary flicker.
+  const mids = rows.map(el => { const r = el.getBoundingClientRect(); return r.top + r.height / 2; });
+  rowDrag = { fid, rowEl, gridEl, rows, mids, fromIndex: rows.indexOf(rowEl), draggedHeight: rowEl.offsetHeight,
+              startY: e.clientY, started: false, targetId: null, after: false, insIdx: null };
+}
+// Slide the other rows to open a gap at the insertion slot (iOS home-screen style).
+function applyRowShift(insIdx) {
+  const { rows, fromIndex, draggedHeight } = rowDrag;
+  rows.forEach((el, i) => {
+    if (i === fromIndex) return;
+    const j = i < fromIndex ? i : i - 1;        // index in the list with the dragged row removed
+    let dy = 0;
+    if (i > fromIndex) dy -= draggedHeight;       // rows below the gap left behind close up
+    if (j >= insIdx) dy += draggedHeight;         // rows at/after the new slot make room
+    el.style.transform = dy ? `translateY(${dy}px)` : '';
+  });
+}
+document.addEventListener('pointermove', e => {
+  if (!rowDrag) return;
+  if (!rowDrag.started) {
+    if (Math.abs(e.clientY - rowDrag.startY) < 4) return;
+    rowDrag.started = true;
+    rowDrag.rowEl.classList.add('row-dragging');
+    rowDrag.gridEl.classList.add('reordering');
+    document.body.style.userSelect = 'none';
+  }
+  e.preventDefault();
+  // Lift the row and let it follow the pointer vertically so the move is visible.
+  rowDrag.rowEl.style.transform = `translateY(${e.clientY - rowDrag.startY}px) scale(1.012)`;
+  // Insertion slot = how many other rows have their (original) midpoint above the cursor.
+  let insIdx = 0;
+  for (let i = 0; i < rowDrag.rows.length; i++) {
+    if (i === rowDrag.fromIndex) continue;
+    if (rowDrag.mids[i] < e.clientY) insIdx++;
+  }
+  rowDrag.insIdx = insIdx;
+  // Map the slot to a neighbor id for the drop (keeps order correct even when some rows are filtered out).
+  const removed = rowDrag.rows.filter((_, i) => i !== rowDrag.fromIndex);
+  if (insIdx <= 0) { rowDrag.targetId = removed[0]?.dataset.fid ?? null; rowDrag.after = false; }
+  else { rowDrag.targetId = removed[insIdx - 1].dataset.fid; rowDrag.after = true; }
+  applyRowShift(insIdx);
+});
+document.addEventListener('pointerup', () => {
+  if (!rowDrag) return;
+  const rd = rowDrag;
+  document.body.style.userSelect = '';
+  if (rd.started) suppressNextRowClick = true; // swallow the trailing click so we don't openEdit
+  clearRowDrag();
+  if (!rd.started || !rd.targetId || rd.insIdx == null || rd.insIdx === rd.fromIndex) { rd.started && renderTimeline(); return; }
+  const features = getFeatures();
+  const fromIdx = features.findIndex(f => f.id === rd.fid);
+  if (fromIdx < 0) return;
+  const [moved] = features.splice(fromIdx, 1);
+  let targetIdx = features.findIndex(f => f.id === rd.targetId);
+  if (targetIdx < 0) { features.splice(fromIdx, 0, moved); return; }
+  features.splice(rd.after ? targetIdx + 1 : targetIdx, 0, moved);
+  saveFeatures(features);
+  renderTimeline();
+  glowMovedRow(rd.fid);
+});
+// Briefly glow the row that was just moved so its new position stands out.
+function glowMovedRow(fid) {
+  const el = document.querySelector(`.g-feature-row[data-fid="${fid}"]`);
+  if (!el) return;
+  el.classList.add('row-moved');
+  el.addEventListener('animationend', () => el.classList.remove('row-moved'), { once: true });
+}
+// Suppress the click that fires right after a drag-release (prevents accidental openEdit)
+document.addEventListener('click', e => {
+  if (suppressNextRowClick) { e.stopPropagation(); e.preventDefault(); suppressNextRowClick = false; }
+}, true);
+
+// anchor on the 1st before shifting months — otherwise the 29th–31st overflows and skips a month
+function shiftPeriod(months) { tlAnchor.setDate(1); tlAnchor.setMonth(tlAnchor.getMonth() + months); renderTimeline(); }
+document.getElementById('tl-prev').addEventListener('click', () => shiftPeriod(tlRange === 'month' ? -1 : -3));
+document.getElementById('tl-next').addEventListener('click', () => shiftPeriod(tlRange === 'month' ? 1 : 3));
 document.getElementById('tl-today').addEventListener('click', () => { tlAnchor = new Date(); renderTimeline(); });
 document.querySelectorAll('.toggle-btn').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -994,8 +1120,14 @@ document.getElementById('tl-tag-filter').addEventListener('change', renderTimeli
 
 document.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
-  const openModal = document.querySelector('.modal-overlay.open');
-  if (openModal) { openModal.classList.remove('open'); return; }
+  // close the topmost open modal (later in DOM paints on top — e.g. confirm over edit modal)
+  const openModals = document.querySelectorAll('.modal-overlay.open');
+  if (openModals.length) {
+    const top = openModals[openModals.length - 1];
+    top.classList.remove('open');
+    if (top.id === 'confirm-overlay') confirmCb = null;
+    return;
+  }
   const pop = document.getElementById('tl-info-popover');
   if (pop && !pop.hasAttribute('hidden')) {
     pop.setAttribute('hidden','');
@@ -1068,6 +1200,13 @@ window.addEventListener('scroll', closeFloatingTagsPopover, true);
 // ── DAY MODAL (log / holiday) ────────────────────────────
 let dayCtx = { fid: null, date: null };
 let dayType = 'working';
+let dayStatus = 'in_progress';
+
+function setDayStatus(val) {
+  dayStatus = val;
+  document.querySelectorAll('.day-status-option').forEach(o => o.classList.toggle('active', o.dataset.value === val));
+}
+document.querySelectorAll('.day-status-option').forEach(o => o.addEventListener('click', () => setDayStatus(o.dataset.value)));
 
 function openDayModalRange(fid, start, end) {
   const f = getFeatures().find(x => x.id === fid);
@@ -1080,6 +1219,7 @@ function openDayModalRange(fid, start, end) {
   document.getElementById('day-holiday-from').value = start;
   document.getElementById('day-holiday-to').value = end;
   setDayType('working');
+  setDayStatus(f.status);
   document.getElementById('day-modal-delete').style.display = 'none';
   document.getElementById('day-modal-overlay').classList.add('open');
   document.getElementById('day-note-input').focus();
@@ -1098,6 +1238,7 @@ function openDayModal(fid, date) {
   document.getElementById('day-holiday-from').value = date;
   document.getElementById('day-holiday-to').value = date;
   setDayType(isHol ? 'holiday' : 'working');
+  setDayStatus(f.status);
   const covered = (f.blocks||[]).some(b => b.start && b.start <= date && (b.end||b.start) >= date);
   const hasNote = !!(f.dayNotes && f.dayNotes[date]);
   document.getElementById('day-modal-delete').style.display = (isHol || covered || hasNote) ? 'block' : 'none';
@@ -1126,19 +1267,16 @@ function saveWorkingDay() {
   const date = dayCtx.date;
   const rangeEnd = dayCtx.rangeEnd;
   if (!Array.isArray(f.blocks)) f.blocks = [];
+  // holidays are never deleted here — like weekends, work on a holiday stays a standalone
+  // block (normalizeBlocks keeps all-off-day blocks) and the global holiday remains marked
   if (rangeEnd && rangeEnd !== date) {
-    const holidays = getHolidays();
-    let c = date;
-    while (c <= rangeEnd) { if (holidays[c]) delete holidays[c]; c = addDays(c, 1); }
-    saveHolidays(holidays);
     f.blocks.push({ id: uid(), start: date, end: rangeEnd });
     f.blocks = normalizeBlocks(f.blocks);
   } else {
-    const holidays = getHolidays();
-    if (holidays[date]) { delete holidays[date]; saveHolidays(holidays); }
     const covered = f.blocks.some(b => b.start && b.start <= date && (b.end||b.start) >= date);
     if (!covered) { f.blocks.push({ id: uid(), start: date, end: date }); f.blocks = normalizeBlocks(f.blocks); }
   }
+  f.status = dayStatus;
   if (!f.dayNotes) f.dayNotes = {};
   const v = document.getElementById('day-note-input').value.trim();
   if (v) f.dayNotes[date] = v; else delete f.dayNotes[date];
@@ -1255,9 +1393,15 @@ document.querySelectorAll('.status-option').forEach(o => o.addEventListener('cli
 function renderTagsPicker() {
   const tags = getTags();
   document.getElementById('tags-picker').innerHTML =
-    tags.map(t=>`<span class="tag-option ${selectedTags.includes(t)?'selected':''}" onclick="toggleTag('${escapeAttr(t)}')">${tagInnerHTML(t)}</span>`).join('') +
-    `<span class="tag-option add-tag" onclick="promptAddTag()">+ New tag</span>`;
+    tags.map(t=>`<span class="tag-option ${selectedTags.includes(t)?'selected':''}" data-tag="${escapeAttr(t)}">${tagInnerHTML(t)}</span>`).join('') +
+    `<span class="tag-option add-tag">+ New tag</span>`;
 }
+document.getElementById('tags-picker').addEventListener('click', e => {
+  const opt = e.target.closest('.tag-option');
+  if (!opt) return;
+  if (opt.classList.contains('add-tag')) return promptAddTag();
+  toggleTag(opt.dataset.tag);
+});
 function toggleTag(t) { selectedTags = selectedTags.includes(t) ? selectedTags.filter(x=>x!==t) : [...selectedTags, t]; renderTagsPicker(); }
 function promptAddTag() {
   const name = prompt('New tag name:');
@@ -1333,9 +1477,10 @@ function deleteFeature(id) {
 
 // ── CONFIRM DIALOG ───────────────────────────────────────
 let confirmCb = null;
-function confirmDialog(msg, onYes) {
+function confirmDialog(msg, onYes, okLabel = 'Delete') {
   confirmCb = onYes;
   document.getElementById('confirm-msg').textContent = msg;
+  document.getElementById('confirm-ok').textContent = okLabel;
   document.getElementById('confirm-overlay').classList.add('open');
 }
 function closeConfirm() { confirmCb = null; document.getElementById('confirm-overlay').classList.remove('open'); }
@@ -1349,6 +1494,7 @@ function showToast(msg, undoFn) {
   clearTimeout(toastTimer);
   toastUndo = undoFn;
   document.getElementById('toast-msg').textContent = msg;
+  document.getElementById('toast-undo').style.display = undoFn ? '' : 'none';
   const t = document.getElementById('toast');
   t.classList.add('show');
   toastTimer = setTimeout(hideToast, 6000);
@@ -1358,13 +1504,55 @@ document.getElementById('toast-undo').addEventListener('click', () => { if (toas
 
 // ── ESCAPING ─────────────────────────────────────────────
 function escapeHTML(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-function escapeAttr(s) { return String(s ?? '').replace(/"/g, '&quot;').replace(/'/g, "\\'").replace(/\n/g, ' '); }
+function escapeAttr(s) { return escapeHTML(String(s ?? '').replace(/\n/g, ' ')); }
 function tagInnerHTML(t) {
   if (t.startsWith('Jiraaf ')) return `<img class="tag-icon" src="Assets/Icons/Jiraaf_Symbol.svg" alt="Jiraaf">${escapeHTML(t.slice(7))}`;
   if (t.startsWith('altGraaf ')) return `<img class="tag-icon" src="Assets/Icons/altGraaf_Symbol.svg" alt="altGraaf">${escapeHTML(t.slice(9))}`;
   return escapeHTML(t);
 }
 function tagChipHTML(t) { return `<span class="tag">${tagInnerHTML(t)}</span>`; }
+
+// ── EXPORT / IMPORT (JSON backup) ────────────────────────
+const ONE_TIME_FLAGS = ['wt_restored_v1','wt_split_weekends_v1','wt_figjam_import_v1','wt_pm_backfill_v1'];
+
+document.getElementById('export-btn').addEventListener('click', () => {
+  const data = { app: 'work-tracker', version: 1, exportedAt: new Date().toISOString(), features: getFeatures(), tags: getTags(), holidays: getHolidays() };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `work-tracker-backup-${today()}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  showToast('Backup downloaded');
+});
+
+document.getElementById('import-btn').addEventListener('click', () => document.getElementById('import-file').click());
+document.getElementById('import-file').addEventListener('change', e => {
+  const file = e.target.files[0];
+  e.target.value = '';
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    let data;
+    try { data = JSON.parse(reader.result); } catch { return showToast('Import failed — not a valid JSON file'); }
+    if (!data || data.app !== 'work-tracker' || !Array.isArray(data.features)) return showToast('Import failed — not a Work Tracker backup');
+    const when = data.exportedAt ? ', exported ' + formatDate(data.exportedAt.slice(0,10)) : '';
+    confirmDialog(`Replace all current data with this backup (${data.features.length} features${when})? You can undo right after.`, () => {
+      const snapF = getFeatures(), snapT = getTags(), snapH = getHolidays();
+      saveFeatures(data.features);
+      if (Array.isArray(data.tags)) saveTags(data.tags);
+      if (data.holidays && typeof data.holidays === 'object') saveHolidays(data.holidays);
+      ONE_TIME_FLAGS.forEach(k => localStorage.setItem(k, '1')); // imported data is final — don't re-run seeds/backfills on it
+      migrateFeatures();
+      renderView();
+      showToast('Backup imported', () => { saveFeatures(snapF); saveTags(snapT); saveHolidays(snapH); renderView(); });
+    }, 'Replace');
+  };
+  reader.readAsText(file);
+});
+
+// another tab changed the data — re-render so this one doesn't clobber it with stale state
+window.addEventListener('storage', e => { if (!e.key || e.key.startsWith('wt_')) renderView(); });
 
 // ── SEED DATA ────────────────────────────────────────────
 function buildSeed() {

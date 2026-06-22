@@ -13,14 +13,23 @@ A single `index.html` file with embedded CSS and JS. No backend. Data persists i
   "id": "uuid",
   "name": "string (required)",
   "tags": ["string"],
-  "status": "in_progress | done | on_hold",
+  "status": "backlog | in_progress | done | on_hold",
   "pm": "string | null",
+  "priority": "p1 | p2 | p3 | null",
+  "links": [ { "url": "string", "label": "string" } ],
+  "target": "YYYY-MM-DD | null",
   "blocks": [ { "id": "uuid", "start": "YYYY-MM-DD", "end": "YYYY-MM-DD" } ],
   "dayNotes": { "YYYY-MM-DD": "what I did that day" },
   "notes": "string | null",
   "createdAt": "ISO timestamp"
 }
 ```
+
+> **Tasks pipeline & Focus (Jun 2026).** A feature is one unit of work across its whole lifecycle: `backlog → in_progress → done` (plus `on_hold`). There is **one data store** (`wt_features`) and **one object shape** — a "task" is just a feature with `status: 'backlog'` and no blocks yet. Pages are filtered *views* of that store, not separate stores:
+> - **Tasks page** shows `backlog` items only; **Timeline** shows `in_progress`/blocked items; **Log** excludes backlog; **Focus** is the planning home.
+> - **Promote** ("Start working"): flips a backlog task to `in_progress`, drops a 1-day block at **today**, and it appears on the Timeline — the *same object* crossing a filter boundary (no copy/link).
+> - **Send back to Tasks** reverts an item to `backlog` (always confirms; removes its blocks, keeps daily notes).
+> - New optional fields are additive and back-compatible: `priority` (P1/P2/P3), `links` (URL + optional label, **no image embedding** by design — sidesteps localStorage size limits), `target` (a "do by" date that drives the Focus page's *This week* / *Overdue* lists). `migrateFeatures()` backfills `priority:null`, `links:[]`, `target:null` on load.
 
 **Holidays** are stored separately (global, not per-feature) in `localStorage` under `wt_holidays`:
 ```json
@@ -52,7 +61,10 @@ User can add custom tags at any time (e.g. `Design System`, `KYC`, `RA Insights`
 **Chip rendering:** wherever a tag is shown as a chip (Today cards, Log items, Timeline row labels, Modal tag picker), the brand prefix `Jiraaf`/`altGraaf` is replaced by the corresponding SVG from `Assets/Icons/` (`Jiraaf_Symbol.svg`, `altGraaf_Symbol.svg`). The platform suffix stays as text. Custom tags render as plain text. Stored tag strings are unchanged — only the rendering swaps in the icon. Native `<select>` dropdowns (log filter, timeline filter) keep showing the full text string since `<option>` can't render SVGs.
 
 ### Status (drives bar colour)
-`in_progress` (purple) · `done` (green) · `on_hold` (amber)
+`backlog` (slate, Tasks page only) · `in_progress` (purple) · `done` (green) · `on_hold` (**yellow**, `#EAB308` — changed from amber)
+
+### Priority (tasks)
+`p1` High (red) · `p2` Medium (amber) · `p3` Low (grey) · `null` none. Shown as a small badge on Tasks rows and the Focus page.
 
 ---
 
@@ -61,9 +73,10 @@ User can add custom tags at any time (e.g. `Design System`, `KYC`, `RA Insights`
 ```
 index.html
   ├── <head>        CSS variables, reset, typography
-  ├── <nav>         Top navigation (Timeline / Today / Log)
+  ├── <nav>         Top navigation (Timeline / Tasks / Focus / Log)
   ├── #timeline     Timeline / Gantt view (default landing)
-  ├── #today        Today view
+  ├── #tasks        Tasks / Backlog view
+  ├── #today        Focus view (Today + This week + Upcoming) — id is still "today"
   ├── #log          Feature Log view
   ├── #modal        Add / Edit feature modal (shared)
   └── <script>      All JS — data layer, rendering, interactions
@@ -75,18 +88,26 @@ No external dependencies. Pure HTML, CSS, JS.
 
 ## Views
 
-### 1. Today View
-**Purpose:** Answer "what am I working on right now?"
+### 1. Focus View (upgraded "Today" — Phase 2)
+**Purpose:** Answer "what should I work on today and this week?" The nav tab is labelled **Focus** (the view id stays `today`). Three stacked horizons:
+
+1. **⚠️ Overdue** callout (only rendered when present) — `backlog` tasks whose `target` is before today, sorted oldest-first, each with a **Start working** button. Red box.
+2. **In progress** — a card per `in_progress` feature: name, tags, started date + days-ago + days-worked, the **inline "What did I do today?"** field (writes straight to `dayNotes[today]` on blur), and quick actions Edit / To Tasks / Mark Done.
+3. **This week** — `backlog` tasks with `target` from today through the end of this week (Mon–Sun), with the week range shown. Each row: priority badge, name, due badge, Start working.
+4. **Upcoming** — `backlog` tasks with `target` after this week.
+
+Tasks **without** a `target` stay on the Tasks page and don't appear in Focus — only scheduled work surfaces here. Week boundaries: `startOfWeek` = Monday, `endOfWeek` = Sunday; an item due earlier this week but before today reads as **overdue**.
+
+---
+
+### 1b. Tasks / Backlog View (Phase 1)
+**Purpose:** Capture things to do later, then promote them to the Timeline when you start.
 
 **Contents:**
-- Count badge — how many features are in progress
-- Cards for each `in_progress` feature showing:
-  - Feature name
-  - Tags (as chips)
-  - Started date + days ago + total days
-  - **Inline "What did I do today?" field** — writes straight to `dayNotes[today]` on blur (quick logging, no modal)
-  - Quick actions: Edit / Mark as Done
-- Empty state if nothing is in progress
+- **Quick-add bar** — title (Enter to add), optional priority (P1/P2/P3), optional link, optional target date. Creates a `backlog` feature with no blocks. Links auto-prefix `https://`.
+- Count badge + filters: search, priority, tag.
+- **Task list** in manual order (drag to reorder — same flicker-free engine as the Timeline, persists to the shared `wt_features` array). Each row: drag handle, priority badge, name (click → edit), due badge (red if overdue), tag chips, clickable link chips, and **Start working** / **Edit** actions.
+- Empty state when no tasks.
 
 ---
 
@@ -117,7 +138,8 @@ No external dependencies. Pure HTML, CSS, JS.
 **Contents:**
 - Month/quarter toggle at the top (default: current month)
 - Left column: each row stacks three blocks: (1) brand badges on their own line, (2) feature name (wraps to multiple lines if long), (3) a single subtitle line `Nd worked | PM: <name>` (PM segment omitted when not set). Tags are collapsed to small **brand badges** (one Jiraaf or altGraaf SVG per unique brand) plus a `+N` badge for any custom tags. Hovering (or keyboard-focusing) the badge cluster reveals a popover with the full chip list. Today / Log views still show full chips.
-- Features with status `done` sort to the **bottom** of the row order so active and on-hold work is closer to the top of the view.
+- **Rows are NOT sorted by status.** They keep their stored order (order added, or as manually reordered) — marking a feature Done no longer moves it. **Drag-to-reorder** by grabbing a row's Feature cell: the row lifts and follows the cursor, the other rows slide to open a gap (iOS-home-screen style), and on drop the moved row briefly glows. Detection uses each row's midpoint captured at drag start (not live hit-testing) to avoid flicker. The new order persists to `wt_features`.
+- **Done check-mark:** a green ✓ pins to the right of the Feature cell for `done` rows; it yields to the drag handle (⠿) on hover.
 - **In-progress features always get a row**, even when they have no block in the visible period — so on the 1st of a new month you can click a day and log work without opening the edit modal. Done/on-hold features only appear when a block overlaps the period.
 - All block interactions use **Pointer Events**, so moving/resizing blocks also works on touch devices (blocks set `touch-action: none`; empty cells still allow touch-scrolling, and a tap on a cell opens the Day modal).
 - **Add Feature affordance:** a thin row at the bottom of the gantt table that's transparent at rest and reveals a `+ Add feature` bar on hover. Click it to open the Add Feature modal. (Replaces the old floating + button — Today/Log views no longer have an inline add affordance; switch to Timeline to add.)
@@ -128,8 +150,9 @@ No external dependencies. Pure HTML, CSS, JS.
   - **Weekends are shown as shaded columns.** A block dragged across a weekend splits (Thu–Fri + Mon–Tue) so the weekend isn't counted — but clicking a weekend cell logs work for that day (a standalone weekend block that is kept and counted).
   - Today column highlighted.
   - **Day notes render inline inside the bar.** A note "owns" all subsequent days within the same block until the next note (or the block end). Long notes are clamped to 3 lines with full text on hover. Notes don't carry across separate blocks — each block starts blank. (Replaces the old "note dot" indicator.)
+  - **Notes follow the block when it moves.** Moving a block or dragging its **left** edge re-anchors its notes (`reanchorBlockNotes`): they shift by the same amount the block's start moved, so the leading note lands on the new **first section**. Notes that would land on a non-working day or off the new range snap to the first working day; collisions merge (newline-joined). Right-edge resize leaves the start put, so it's untouched.
 - A small **info (i) button** near the filter/toggle opens a popover with the "how this works" hint (replaces the always-visible help line).
-- The **gantt area has its own scroll container** (max-height ≈ viewport − 200px). The month + day-header rows stick to the top while scrolling vertically; the feature-name column stays sticky on the left during horizontal scroll.
+- The **gantt area has its own scroll container** (max-height ≈ viewport − 200px). The month + day-header rows stick to the top while scrolling vertically; the feature-name column stays sticky on the left and is now **persistent across the full horizontal scroll** (`.gantt-grid` uses `width: max-content` so each row spans the whole track and the sticky column no longer detaches past one screen-width).
 - Navigation: previous / next period arrows
 - Filter: by tag (to reduce noise)
 - Bar colour by status: In Progress — purple · Done — green · On Hold — amber
@@ -143,7 +166,10 @@ No external dependencies. Pure HTML, CSS, JS.
 - Name (text input, required)
 - Product Manager (text input, optional — free text, surfaces on Timeline and Log)
 - Tags (multi-select from tag list + inline "Add new tag" option)
-- Status (segmented control: In Progress / Done / On Hold)
+- Status (segmented control: **Backlog** / In Progress / Done / On Hold). Choosing **Backlog hides the Work blocks section** — backlog items have no blocks, and the block validation is skipped for them.
+- Priority (segmented control: None / P1 / P2 / P3)
+- Links (dynamic list of URL + optional label rows; + Add link / remove)
+- Target date (optional — drives the Focus page's This week / Overdue lists)
 - Work blocks: a dynamic list of start/end rows (+ Add block / remove). Same blocks you can draw on the Timeline.
 - Notes (textarea, optional — general context, not the daily log)
 - Actions: Save / Cancel / Delete (on edit only)
@@ -185,8 +211,10 @@ A **Day modal** opens from the Timeline whenever you click a day (cell or block)
 - Status colours (also drive the Timeline bars):
   - In Progress — `#7B61FF` purple
   - Done — `#1BC47D` green
-  - On Hold — `#F5A623` amber
-- Weekend/holiday column shading: `rgba(60,50,35,0.07)`
+  - On Hold — `#EAB308` **yellow** (changed from amber)
+  - Backlog — `#64748B` slate (Tasks page badge only)
+- Priority colours: P1 `#E5484D` red · P2 `#F5A623` amber · P3 `#888076` grey
+- Weekend column shading: `rgba(60,50,35,0.16)` · Holiday shading `rgba(245,166,35,0.30)` (both darkened Jun 2026)
 - Fully responsive — works on mobile browser too
 
 ## Seed Data

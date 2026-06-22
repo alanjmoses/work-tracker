@@ -26,6 +26,10 @@
     --status-inprogress: #7B61FF;
     --status-done: #1BC47D;
     --status-onhold: #EAB308;
+    --status-backlog: #64748B;
+    --prio-1: #E5484D;
+    --prio-2: #F5A623;
+    --prio-3: #888076;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; scrollbar-width: thin; scrollbar-color: rgba(60,50,35,0.28) transparent; }
@@ -97,6 +101,46 @@
   .status-badge.in_progress { background: rgba(123,97,255,0.1); color: var(--status-inprogress); }
   .status-badge.done { background: rgba(27,196,125,0.1); color: var(--status-done); }
   .status-badge.on_hold { background: rgba(234,179,8,0.14); color: var(--status-onhold); }
+  .status-badge.backlog { background: rgba(100,116,139,0.13); color: var(--status-backlog); }
+
+  /* ── TASKS PAGE ─────────────────────────────────────── */
+  .task-quickadd { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px; margin-bottom: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
+  .task-quickadd .qa-title { flex: 2 1 240px; min-width: 200px; }
+  .task-quickadd .qa-link { flex: 1 1 160px; min-width: 140px; }
+  .tasks-list { display: flex; flex-direction: column; gap: 8px; }
+  .task-row { display: flex; align-items: center; gap: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; transition: box-shadow 0.15s, border-color 0.15s, transform 0s; }
+  .task-row:hover { border-color: #C8C0B4; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+  .task-drag-handle { color: var(--text-muted); opacity: 0; cursor: grab; font-size: 14px; letter-spacing: -1px; user-select: none; flex-shrink: 0; transition: opacity 0.15s; }
+  .task-row:hover .task-drag-handle { opacity: 0.5; }
+  .task-prio { flex-shrink: 0; font-size: 10px; font-weight: 800; letter-spacing: 0.4px; padding: 3px 7px; border-radius: 6px; text-transform: uppercase; }
+  .task-prio.p1 { background: rgba(229,72,77,0.12); color: var(--prio-1); }
+  .task-prio.p2 { background: rgba(245,166,35,0.14); color: var(--prio-2); }
+  .task-prio.p3 { background: rgba(136,128,118,0.14); color: var(--prio-3); }
+  .task-main { flex: 1; min-width: 0; }
+  .task-name { font-weight: 600; font-size: 14px; cursor: pointer; }
+  .task-name:hover { color: var(--accent); }
+  .task-meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 6px; }
+  .task-link { font-size: 11px; font-weight: 600; color: var(--accent); background: var(--accent-light); border: 1px solid rgba(123,97,255,0.2); border-radius: 20px; padding: 2px 9px; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .task-link:hover { background: rgba(123,97,255,0.18); }
+  .task-actions { display: flex; gap: 8px; flex-shrink: 0; }
+  .task-row.task-dragging { opacity: 0.97; z-index: 30; box-shadow: 0 10px 28px rgba(0,0,0,0.18); position: relative; will-change: transform; }
+  .task-row.task-dragging .task-drag-handle { opacity: 0.8; cursor: grabbing; }
+  .tasks-list.reordering .task-row:not(.task-dragging) { transition: transform 0.18s ease; }
+  .qa-date { flex: 0 0 auto; min-width: 0; }
+  .due-badge { font-size: 11px; font-weight: 600; color: var(--text-muted); background: var(--surface2); border: 1px solid var(--border); border-radius: 20px; padding: 2px 9px; white-space: nowrap; }
+  .due-badge.overdue { color: var(--red); background: rgba(229,72,77,0.1); border-color: rgba(229,72,77,0.3); }
+
+  /* ── FOCUS PAGE ─────────────────────────────────────── */
+  .focus-section { margin-bottom: 28px; }
+  .focus-heading { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-muted); margin-bottom: 12px; }
+  .focus-sub { font-weight: 500; text-transform: none; letter-spacing: 0; color: var(--text-muted); opacity: 0.8; margin-left: 4px; }
+  .focus-empty { font-size: 13px; color: var(--text-muted); padding: 14px; background: var(--surface); border: 1px dashed var(--border); border-radius: 12px; }
+  .focus-task { display: flex; align-items: center; gap: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 11px 14px; margin-bottom: 8px; }
+  .focus-task:hover { border-color: #C8C0B4; }
+  .focus-task-name { flex: 1; min-width: 0; font-weight: 600; font-size: 14px; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .focus-task-name:hover { color: var(--accent); }
+  .focus-overdue-box { background: rgba(229,72,77,0.05); border: 1px solid rgba(229,72,77,0.25); border-radius: 14px; padding: 14px; margin-bottom: 28px; }
+  .focus-overdue-head { font-size: 13px; font-weight: 700; color: var(--red); margin-bottom: 10px; }
 
   .filters { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 24px; align-items: center; }
   .filter-select, .filter-input { background: var(--surface); border: 1px solid var(--border); color: var(--text); padding: 8px 12px; border-radius: 8px; font-size: 13px; outline: none; transition: border-color 0.15s; font-family: inherit; }
@@ -171,6 +215,8 @@
   .g-name { cursor: grab; }
   .g-name:hover .g-drag-handle { opacity: 0.55; }
   .g-drag-handle { position: absolute; top: 50%; right: 6px; transform: translateY(-50%); font-size: 13px; line-height: 1; color: var(--text-muted); opacity: 0; transition: opacity 0.15s; pointer-events: none; user-select: none; letter-spacing: -1px; }
+  .g-done-check { position: absolute; top: 50%; right: 6px; transform: translateY(-50%); font-size: 13px; font-weight: 800; line-height: 1; color: var(--status-done); opacity: 1; transition: opacity 0.15s; pointer-events: none; user-select: none; }
+  .g-name:hover .g-done-check { opacity: 0; }
   .g-feature-row.row-dragging { position: relative; z-index: 30; opacity: 0.97; background: var(--surface); box-shadow: 0 10px 28px rgba(0,0,0,0.18); pointer-events: none; transition: box-shadow 0.12s ease; will-change: transform; }
   .g-feature-row.row-dragging .g-name { cursor: grabbing; background: var(--surface); }
   .g-feature-row.row-dragging .g-drag-handle { opacity: 0.8; }
@@ -238,6 +284,17 @@
   .status-option.active[data-value="in_progress"], .day-status-option.active[data-value="in_progress"] { background: rgba(123,97,255,0.12); color: var(--status-inprogress); }
   .status-option.active[data-value="done"], .day-status-option.active[data-value="done"] { background: rgba(27,196,125,0.12); color: var(--status-done); }
   .status-option.active[data-value="on_hold"], .day-status-option.active[data-value="on_hold"] { background: rgba(234,179,8,0.14); color: var(--status-onhold); }
+  .status-option.active[data-value="backlog"] { background: rgba(100,116,139,0.14); color: var(--status-backlog); }
+  .prio-option { flex: 1; padding: 9px; text-align: center; cursor: pointer; font-size: 12px; font-weight: 600; transition: all 0.15s; border: none; background: none; color: var(--text-muted); font-family: inherit; }
+  .prio-option.active[data-value=""] { background: rgba(136,128,118,0.14); color: var(--text); }
+  .prio-option.active[data-value="p1"] { background: rgba(229,72,77,0.12); color: var(--prio-1); }
+  .prio-option.active[data-value="p2"] { background: rgba(245,166,35,0.14); color: var(--prio-2); }
+  .prio-option.active[data-value="p3"] { background: rgba(136,128,118,0.18); color: var(--prio-3); }
+  .links-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
+  .link-row { display: flex; gap: 8px; align-items: center; }
+  .link-row .form-input { flex: 1; }
+  .link-row .lr-url { flex: 2; }
+  .del-block-btn { flex-shrink: 0; }
 
   .day-type-option { flex: 1; padding: 9px; text-align: center; cursor: pointer; font-size: 12px; font-weight: 600; transition: all 0.15s; border: none; background: none; color: var(--text); font-family: inherit; }
   .day-type-option.active[data-type="working"] { background: var(--accent); color: #fff; }
@@ -280,7 +337,8 @@
   <div class="nav-right">
     <div class="nav-tabs">
       <button class="nav-tab active" data-view="timeline">Timeline</button>
-      <button class="nav-tab" data-view="today">Today</button>
+      <button class="nav-tab" data-view="tasks">Tasks</button>
+      <button class="nav-tab" data-view="today">Focus</button>
       <button class="nav-tab" data-view="log">Log</button>
     </div>
     <span class="nav-divider"></span>
@@ -292,13 +350,56 @@
   </div>
 </nav>
 
-<!-- TODAY VIEW -->
+<!-- FOCUS VIEW (upgraded Today) -->
 <div id="view-today" class="view">
   <div class="page-header">
-    <h1 class="page-title">Today</h1>
+    <h1 class="page-title">Focus</h1>
     <span class="page-count" id="today-count">0 in progress</span>
   </div>
-  <div class="cards-grid" id="today-cards"></div>
+  <div id="focus-overdue"></div>
+  <section class="focus-section">
+    <h2 class="focus-heading">In progress <span class="focus-sub" id="focus-today-date"></span></h2>
+    <div class="cards-grid" id="today-cards"></div>
+  </section>
+  <section class="focus-section">
+    <h2 class="focus-heading">This week <span class="focus-sub" id="focus-week-range"></span></h2>
+    <div id="focus-week"></div>
+  </section>
+  <section class="focus-section">
+    <h2 class="focus-heading">Upcoming</h2>
+    <div id="focus-upcoming"></div>
+  </section>
+</div>
+
+<!-- TASKS VIEW -->
+<div id="view-tasks" class="view">
+  <div class="page-header">
+    <h1 class="page-title">Tasks</h1>
+    <span class="page-count" id="tasks-count">0 tasks</span>
+  </div>
+  <div class="task-quickadd">
+    <input class="filter-input qa-title" id="task-add-input" type="text" placeholder="Add a task — something to do later…">
+    <select class="filter-select" id="task-add-prio">
+      <option value="">No priority</option>
+      <option value="p1">P1 · High</option>
+      <option value="p2">P2 · Medium</option>
+      <option value="p3">P3 · Low</option>
+    </select>
+    <input class="filter-input qa-link" id="task-add-link" type="text" placeholder="Link (optional)">
+    <input class="filter-input qa-date" id="task-add-target" type="date" title="Target date (optional)">
+    <button class="btn btn-primary" id="task-add-btn">Add task</button>
+  </div>
+  <div class="filters">
+    <input class="filter-input" id="tasks-search" type="text" placeholder="Search tasks…">
+    <select class="filter-select" id="tasks-prio-filter">
+      <option value="">All priorities</option>
+      <option value="p1">P1 · High</option>
+      <option value="p2">P2 · Medium</option>
+      <option value="p3">P3 · Low</option>
+    </select>
+    <select class="filter-select" id="tasks-tag-filter"><option value="">All tags</option></select>
+  </div>
+  <div class="tasks-list" id="tasks-list"></div>
 </div>
 
 <!-- LOG VIEW -->
@@ -375,6 +476,7 @@
     <div class="form-group">
       <label class="form-label">Status</label>
       <div class="status-toggle">
+        <button class="status-option" data-value="backlog">Backlog</button>
         <button class="status-option active" data-value="in_progress">In Progress</button>
         <button class="status-option" data-value="done">Done</button>
         <button class="status-option" data-value="on_hold">On Hold</button>
@@ -382,6 +484,28 @@
     </div>
 
     <div class="form-group">
+      <label class="form-label">Priority</label>
+      <div class="status-toggle">
+        <button class="prio-option active" data-value="">None</button>
+        <button class="prio-option" data-value="p1">P1 · High</button>
+        <button class="prio-option" data-value="p2">P2 · Medium</button>
+        <button class="prio-option" data-value="p3">P3 · Low</button>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Links</label>
+      <div class="links-list" id="links-list"></div>
+      <button class="add-block-btn" id="add-link-btn">+ Add link</button>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Target date</label>
+      <input class="form-input" id="f-target" type="date">
+      <p class="field-hint">Optional — when you'd like to get to this. Drives the Focus page's “This week” and overdue lists.</p>
+    </div>
+
+    <div class="form-group" id="blocks-group">
       <label class="form-label">Work blocks</label>
       <div class="blocks-list" id="blocks-list"></div>
       <button class="add-block-btn" id="add-block-btn">+ Add block</button>
@@ -496,6 +620,9 @@ function daysBetween(a, b) { return Math.round((parseISO(b) - parseISO(a)) / 864
 function addDays(ds, n) { const d = parseISO(ds); d.setDate(d.getDate() + n); return localISO(d); }
 function daysAgo(d) { return daysBetween(d, today()); }
 function isWeekend(ds) { const g = parseISO(ds).getDay(); return g === 0 || g === 6; }
+function startOfWeek(ds) { const d = parseISO(ds); const g = d.getDay(); d.setDate(d.getDate() + (g === 0 ? -6 : 1 - g)); return localISO(d); } // Monday
+function endOfWeek(ds) { return addDays(startOfWeek(ds), 6); } // Sunday
+function lastWorkdayOfWeek(ds) { return addDays(startOfWeek(ds), 4); } // Friday
 // holidays: { 'YYYY-MM-DD': 'reason' } — global, non-working like weekends
 function getHolidays() { return load('wt_holidays', {}); }
 function saveHolidays(h) { save('wt_holidays', h); }
@@ -511,7 +638,7 @@ function featureWorkedDays(f) {
   (f.blocks||[]).forEach(b => { if (!b.start) return; let c = b.start; const e = b.end || b.start; while (c <= e) { set.add(c); c = addDays(c, 1); } });
   return set.size;
 }
-function statusLabel(s) { return { in_progress: 'In Progress', done: 'Done', on_hold: 'On Hold' }[s] || s; }
+function statusLabel(s) { return { backlog: 'Backlog', in_progress: 'In Progress', done: 'Done', on_hold: 'On Hold' }[s] || s; }
 function dayNotesSorted(f) { return Object.entries(f.dayNotes || {}).filter(([,v]) => v && v.trim()).sort((a,b) => a[0].localeCompare(b[0])); }
 
 // ── MIGRATION ───────────────────────────────────────────
@@ -536,6 +663,9 @@ function migrateFeatures() {
     if ('endDate' in f) { delete f.endDate; changed = true; }
     if (!f.dayNotes || typeof f.dayNotes !== 'object') { f.dayNotes = {}; changed = true; }
     if (!('pm' in f)) { f.pm = null; changed = true; }
+    if (!('priority' in f)) { f.priority = null; changed = true; }
+    if (!Array.isArray(f.links)) { f.links = []; changed = true; }
+    if (!('target' in f)) { f.target = null; changed = true; }
   });
   if (changed) saveFeatures(features);
 }
@@ -595,40 +725,75 @@ document.querySelectorAll('.nav-tab').forEach(tab => {
 });
 function renderView() {
   if (currentView === 'today') renderToday();
+  if (currentView === 'tasks') renderTasks();
   if (currentView === 'log') renderLog();
   if (currentView === 'timeline') renderTimeline();
 }
 
-// ── TODAY ────────────────────────────────────────────────
+// ── FOCUS (Today + This week + Upcoming) ─────────────────
+function inProgressCardHTML(f, t) {
+  const start = featureStart(f);
+  const worked = featureWorkedDays(f);
+  const todayNote = (f.dayNotes && f.dayNotes[t]) ? f.dayNotes[t] : '';
+  return `<div class="feature-card">
+    <div class="card-name" onclick="openEdit('${f.id}')">${escapeHTML(f.name)}</div>
+    <div class="tags-row">${f.tags.map(tg=>tagChipHTML(tg)).join('')}</div>
+    <div class="stage-info">
+      <div class="stage-meta">Started <strong>${formatDate(start)}</strong>${start ? ` · ${daysAgo(start)} days ago` : ''} · <strong>${worked}</strong> day${worked!==1?'s':''} worked</div>
+    </div>
+    <div class="today-note-wrap">
+      <span class="today-note-label">What did I do today? (${formatDateShort(t)})</span>
+      <textarea class="today-note-input" placeholder="Jot a quick note…" onblur="saveTodayNote('${f.id}', this.value, this)">${escapeHTML(todayNote)}</textarea>
+    </div>
+    <div class="card-actions">
+      <button class="btn btn-ghost" onclick="openEdit('${f.id}')">Edit</button>
+      <button class="btn btn-ghost" onclick="sendToBacklog('${f.id}')">To Tasks</button>
+      <button class="btn btn-success" onclick="markDone('${f.id}')">Mark Done</button>
+    </div>
+  </div>`;
+}
+function focusTaskRow(f, t) {
+  const due = f.target ? `<span class="due-badge ${f.target < t ? 'overdue' : ''}">📅 ${formatDateShort(f.target)}</span>` : '';
+  return `<div class="focus-task" data-fid="${f.id}">
+    ${f.priority ? `<span class="task-prio ${f.priority}">${prioLabel(f.priority)}</span>` : ''}
+    <span class="focus-task-name" onclick="openEdit('${f.id}')">${escapeHTML(f.name)}</span>
+    ${due}
+    <button class="btn btn-success" onclick="startWorking('${f.id}')">Start working</button>
+  </div>`;
+}
 function renderToday() {
-  const features = getFeatures().filter(f => f.status === 'in_progress');
-  const container = document.getElementById('today-cards');
-  document.getElementById('today-count').textContent = features.length + ' in progress';
-  if (!features.length) {
-    container.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🎯</div><p>Nothing in progress</p><span>Add a feature to get started</span></div>`;
-    return;
-  }
   const t = today();
-  container.innerHTML = features.map(f => {
-    const start = featureStart(f);
-    const worked = featureWorkedDays(f);
-    const todayNote = (f.dayNotes && f.dayNotes[t]) ? f.dayNotes[t] : '';
-    return `<div class="feature-card">
-      <div class="card-name" onclick="openEdit('${f.id}')">${escapeHTML(f.name)}</div>
-      <div class="tags-row">${f.tags.map(tg=>tagChipHTML(tg)).join('')}</div>
-      <div class="stage-info">
-        <div class="stage-meta">Started <strong>${formatDate(start)}</strong>${start ? ` · ${daysAgo(start)} days ago` : ''} · <strong>${worked}</strong> day${worked!==1?'s':''} worked</div>
-      </div>
-      <div class="today-note-wrap">
-        <span class="today-note-label">What did I do today? (${formatDateShort(t)})</span>
-        <textarea class="today-note-input" placeholder="Jot a quick note…" onblur="saveTodayNote('${f.id}', this.value, this)">${escapeHTML(todayNote)}</textarea>
-      </div>
-      <div class="card-actions">
-        <button class="btn btn-ghost" onclick="openEdit('${f.id}')">Edit</button>
-        <button class="btn btn-success" onclick="markDone('${f.id}')">Mark Done</button>
-      </div>
-    </div>`;
-  }).join('');
+  const all = getFeatures();
+  const inProgress = all.filter(f => f.status === 'in_progress');
+  const backlog = all.filter(f => f.status === 'backlog');
+  document.getElementById('today-count').textContent = inProgress.length + ' in progress';
+  document.getElementById('focus-today-date').textContent = '· ' + formatDate(t);
+
+  // In-progress cards
+  const cards = document.getElementById('today-cards');
+  cards.innerHTML = inProgress.length
+    ? inProgress.map(f => inProgressCardHTML(f, t)).join('')
+    : `<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🎯</div><p>Nothing in progress</p><span>Start a task from the Tasks page, or add a feature</span></div>`;
+
+  // Overdue scheduled tasks (backlog, past due)
+  const overdue = backlog.filter(f => f.target && f.target < t).sort((a,b) => a.target.localeCompare(b.target));
+  document.getElementById('focus-overdue').innerHTML = overdue.length
+    ? `<div class="focus-overdue-box"><div class="focus-overdue-head">⚠️ ${overdue.length} overdue task${overdue.length!==1?'s':''}</div>${overdue.map(f => focusTaskRow(f, t)).join('')}</div>`
+    : '';
+
+  // This week (due today → end of this week)
+  const we = endOfWeek(t);
+  document.getElementById('focus-week-range').textContent = '· ' + formatDateShort(startOfWeek(t)) + ' – ' + formatDateShort(we);
+  const week = backlog.filter(f => f.target && f.target >= t && f.target <= we).sort((a,b) => a.target.localeCompare(b.target));
+  document.getElementById('focus-week').innerHTML = week.length
+    ? week.map(f => focusTaskRow(f, t)).join('')
+    : `<div class="focus-empty">No tasks due this week.</div>`;
+
+  // Upcoming (due after this week)
+  const upcoming = backlog.filter(f => f.target && f.target > we).sort((a,b) => a.target.localeCompare(b.target));
+  document.getElementById('focus-upcoming').innerHTML = upcoming.length
+    ? upcoming.map(f => focusTaskRow(f, t)).join('')
+    : `<div class="focus-empty">Nothing scheduled beyond this week.</div>`;
 }
 
 function saveTodayNote(id, value, el) {
@@ -658,9 +823,193 @@ function markDone(id) {
   renderView();
 }
 
+// ── TASKS (backlog) ──────────────────────────────────────
+function prioRank(p) { return p === 'p1' ? 1 : p === 'p2' ? 2 : p === 'p3' ? 3 : 4; }
+function prioLabel(p) { return p ? p.toUpperCase() : ''; }
+function linkLabel(l) { return l.label || l.url.replace(/^https?:\/\/(www\.)?/, '').slice(0, 40); }
+
+function renderTasks() {
+  const all = getFeatures();
+  // tag filter options
+  const tagSel = document.getElementById('tasks-tag-filter');
+  const curTag = tagSel.value;
+  const tags = [...new Set(all.filter(f => f.status === 'backlog').flatMap(f => f.tags))].sort();
+  tagSel.innerHTML = '<option value="">All tags</option>' + tags.map(t => `<option value="${escapeAttr(t)}">${escapeHTML(t)}</option>`).join('');
+  tagSel.value = curTag;
+
+  const search = document.getElementById('tasks-search').value.toLowerCase();
+  const prioF = document.getElementById('tasks-prio-filter').value;
+  let tasks = all.filter(f => f.status === 'backlog'); // stored array order = manual order
+  if (search) tasks = tasks.filter(f => f.name.toLowerCase().includes(search));
+  if (prioF) tasks = tasks.filter(f => (f.priority || '') === prioF);
+  if (tagSel.value) tasks = tasks.filter(f => f.tags.includes(tagSel.value));
+
+  document.getElementById('tasks-count').textContent = tasks.length + ' task' + (tasks.length !== 1 ? 's' : '');
+  const list = document.getElementById('tasks-list');
+  if (!tasks.length) {
+    list.innerHTML = `<div class="empty-state"><div class="empty-icon">🗒️</div><p>No tasks yet</p><span>Capture something to do later using the bar above</span></div>`;
+    return;
+  }
+  const t = today();
+  list.innerHTML = tasks.map(f => {
+    const links = (f.links || []).map(l =>
+      `<a class="task-link" href="${escapeAttr(l.url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="${escapeAttr(l.url)}">🔗 ${escapeHTML(linkLabel(l))}</a>`
+    ).join('');
+    const due = f.target ? `<span class="due-badge ${f.target < t ? 'overdue' : ''}">📅 ${formatDateShort(f.target)}</span>` : '';
+    return `<div class="task-row" data-fid="${f.id}" onpointerdown="taskDragDown(event,'${f.id}')">
+      <span class="task-drag-handle" aria-hidden="true">⠿</span>
+      ${f.priority ? `<span class="task-prio ${f.priority}">${prioLabel(f.priority)}</span>` : ''}
+      <div class="task-main">
+        <span class="task-name" onclick="openEdit('${f.id}')">${escapeHTML(f.name)}</span>
+        <div class="task-meta">${due}${f.tags.map(t => tagChipHTML(t)).join('')}${links}</div>
+      </div>
+      <div class="task-actions">
+        <button class="btn btn-success" onclick="startWorking('${f.id}')">Start working</button>
+        <button class="btn btn-ghost" onclick="openEdit('${f.id}')">Edit</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function quickAddTask() {
+  const input = document.getElementById('task-add-input');
+  const name = input.value.trim();
+  if (!name) { input.focus(); return; }
+  const prio = document.getElementById('task-add-prio').value || null;
+  const linkEl = document.getElementById('task-add-link');
+  const url = linkEl.value.trim();
+  const links = url ? [{ url: /^https?:\/\//i.test(url) ? url : 'https://' + url, label: '' }] : [];
+  const target = document.getElementById('task-add-target').value || null;
+  const features = getFeatures();
+  features.push({ id: uid(), name, tags: [], status: 'backlog', priority: prio, links, target,
+                  blocks: [], dayNotes: {}, notes: '', pm: null, createdAt: new Date().toISOString() });
+  saveFeatures(features);
+  input.value = ''; linkEl.value = ''; document.getElementById('task-add-prio').value = ''; document.getElementById('task-add-target').value = '';
+  renderTasks();
+  input.focus();
+}
+
+// Promote a backlog task onto the Timeline: starts today and jumps to the Timeline.
+function startWorking(id) {
+  const features = getFeatures();
+  const f = features.find(x => x.id === id);
+  if (!f) return;
+  f.status = 'in_progress';
+  if (!Array.isArray(f.blocks)) f.blocks = [];
+  const t = today();
+  if (!f.blocks.some(b => b.start && b.start <= t && (b.end || b.start) >= t)) {
+    f.blocks.push({ id: uid(), start: t, end: t });
+  }
+  f.blocks = normalizeBlocks(f.blocks);
+  saveFeatures(features);
+  switchTo('timeline');
+  glowMovedRow(id);
+}
+
+// Send an in-progress/done/on-hold item back to the backlog (Tasks page). Always confirms.
+function sendToBacklog(id) {
+  const f = getFeatures().find(x => x.id === id);
+  if (!f) return;
+  const hadWork = (f.blocks || []).length > 0 || Object.values(f.dayNotes || {}).some(v => v && v.trim());
+  const msg = hadWork
+    ? `Send "${f.name}" back to Tasks? Its work blocks will be removed (daily notes are kept).`
+    : `Send "${f.name}" back to Tasks?`;
+  confirmDialog(msg, () => {
+    const features = getFeatures();
+    const t = features.find(x => x.id === id);
+    if (!t) return;
+    t.status = 'backlog';
+    t.blocks = [];
+    saveFeatures(features);
+    renderView();
+    showToast('Moved to Tasks');
+  }, 'Send back');
+}
+
+function switchTo(view) {
+  const tab = document.querySelector(`.nav-tab[data-view="${view}"]`);
+  if (tab) tab.click();
+}
+
+['task-add-btn'].forEach(id => document.getElementById(id).addEventListener('click', quickAddTask));
+document.getElementById('task-add-input').addEventListener('keydown', e => { if (e.key === 'Enter') quickAddTask(); });
+document.getElementById('task-add-link').addEventListener('keydown', e => { if (e.key === 'Enter') quickAddTask(); });
+['tasks-search', 'tasks-prio-filter', 'tasks-tag-filter'].forEach(id =>
+  document.getElementById(id).addEventListener('input', renderTasks));
+
+// ── TASK DRAG (reorder backlog) ──────────────────────────
+let taskDrag = null;
+function resetTaskShifts() { if (taskDrag && taskDrag.rows) taskDrag.rows.forEach((el, i) => { if (i !== taskDrag.fromIndex) el.style.transform = ''; }); }
+function clearTaskDrag() {
+  if (!taskDrag) return;
+  if (taskDrag.listEl) taskDrag.listEl.classList.remove('reordering');
+  if (taskDrag.rowEl) { taskDrag.rowEl.classList.remove('task-dragging'); taskDrag.rowEl.style.transform = ''; }
+  resetTaskShifts();
+  taskDrag = null;
+}
+function taskDragDown(e, fid) {
+  if (e.target.closest('.task-name, .task-link, .btn')) return; // let clicks/links work
+  const rowEl = e.target.closest('.task-row');
+  const listEl = document.getElementById('tasks-list');
+  if (!rowEl || !listEl) return;
+  const rows = [...listEl.querySelectorAll('.task-row')];
+  suppressNextRowClick = false;
+  const mids = rows.map(el => { const r = el.getBoundingClientRect(); return r.top + r.height / 2; });
+  taskDrag = { fid, rowEl, listEl, rows, mids, fromIndex: rows.indexOf(rowEl), height: rowEl.offsetHeight,
+               startY: e.clientY, started: false, targetId: null, after: false, insIdx: null };
+}
+function applyTaskShift(insIdx) {
+  const { rows, fromIndex, height } = taskDrag;
+  rows.forEach((el, i) => {
+    if (i === fromIndex) return;
+    const j = i < fromIndex ? i : i - 1;
+    let dy = 0;
+    if (i > fromIndex) dy -= height;
+    if (j >= insIdx) dy += height;
+    el.style.transform = dy ? `translateY(${dy}px)` : '';
+  });
+}
+document.addEventListener('pointermove', e => {
+  if (!taskDrag) return;
+  if (!taskDrag.started) {
+    if (Math.abs(e.clientY - taskDrag.startY) < 4) return;
+    taskDrag.started = true;
+    taskDrag.rowEl.classList.add('task-dragging');
+    taskDrag.listEl.classList.add('reordering');
+    document.body.style.userSelect = 'none';
+  }
+  e.preventDefault();
+  taskDrag.rowEl.style.transform = `translateY(${e.clientY - taskDrag.startY}px)`;
+  let insIdx = 0;
+  for (let i = 0; i < taskDrag.rows.length; i++) { if (i === taskDrag.fromIndex) continue; if (taskDrag.mids[i] < e.clientY) insIdx++; }
+  taskDrag.insIdx = insIdx;
+  const removed = taskDrag.rows.filter((_, i) => i !== taskDrag.fromIndex);
+  if (insIdx <= 0) { taskDrag.targetId = removed[0]?.dataset.fid ?? null; taskDrag.after = false; }
+  else { taskDrag.targetId = removed[insIdx - 1].dataset.fid; taskDrag.after = true; }
+  applyTaskShift(insIdx);
+});
+document.addEventListener('pointerup', () => {
+  if (!taskDrag) return;
+  const td = taskDrag;
+  document.body.style.userSelect = '';
+  if (td.started) suppressNextRowClick = true;
+  clearTaskDrag();
+  if (!td.started || !td.targetId || td.insIdx == null || td.insIdx === td.fromIndex) { td.started && renderTasks(); return; }
+  const features = getFeatures();
+  const fromIdx = features.findIndex(f => f.id === td.fid);
+  if (fromIdx < 0) return;
+  const [moved] = features.splice(fromIdx, 1);
+  let targetIdx = features.findIndex(f => f.id === td.targetId);
+  if (targetIdx < 0) { features.splice(fromIdx, 0, moved); return; }
+  features.splice(td.after ? targetIdx + 1 : targetIdx, 0, moved);
+  saveFeatures(features);
+  renderTasks();
+});
+document.addEventListener('pointercancel', () => { if (taskDrag) clearTaskDrag(); });
+
 // ── LOG ──────────────────────────────────────────────────
 function renderLog() {
-  const all = getFeatures();
+  const all = getFeatures().filter(f => f.status !== 'backlog'); // backlog tasks live on the Tasks page
   populateLogFilters(all);
   const search = document.getElementById('log-search').value.toLowerCase();
   const statusF = document.getElementById('log-status').value;
@@ -714,6 +1063,7 @@ function renderLog() {
         ${f.notes ? `<div class="log-notes">${escapeHTML(f.notes)}</div>` : ''}
         <div class="log-actions">
           <button class="btn btn-ghost" onclick="openEdit('${f.id}')">Edit</button>
+          <button class="btn btn-ghost" onclick="sendToBacklog('${f.id}')">To Tasks</button>
           <button class="btn btn-danger" onclick="deleteFeature('${f.id}')">Delete</button>
         </div>
       </div>
@@ -901,6 +1251,7 @@ function renderTimeline() {
     html += `<div class="g-row g-feature-row" data-fid="${f.id}">
       <div class="g-name" onpointerdown="rowDragDown(event,'${f.id}')" title="Drag to reorder">
         <span class="g-drag-handle" aria-hidden="true">⠿</span>
+        ${f.status === 'done' ? '<span class="g-done-check" title="Done" aria-label="Done">✓</span>' : ''}
         ${collapsedTags}
         <span class="feat-name" onclick="openEdit('${f.id}')">${escapeHTML(f.name)}</span>
         <div class="g-subtitle">${metaLine}</div>
@@ -954,6 +1305,32 @@ document.addEventListener('pointerup', () => {
 });
 
 // ── BLOCK DRAG (move / resize), weekday-aware ───────────
+// When a block is moved or resized from the left, its notes ride along and re-anchor to the
+// block's first section. Notes shift by the same amount the block's start moved; any that would
+// land off the new range or on a non-working day snap to the first working day (first section).
+function reanchorBlockNotes(f, oldStart, oldEnd, newStart, newEnd) {
+  if (!f.dayNotes) return;
+  const moving = Object.keys(f.dayNotes)
+    .filter(k => k >= oldStart && k <= oldEnd && f.dayNotes[k] && f.dayNotes[k].trim())
+    .sort();
+  if (!moving.length) return;
+  const holidays = getHolidays();
+  const off = ds => isWeekend(ds) || !!holidays[ds];
+  const texts = moving.map(k => f.dayNotes[k]);
+  moving.forEach(k => { delete f.dayNotes[k]; });
+  const slots = [];                                   // working days of the new range, in order
+  for (let d = newStart; d <= newEnd; d = addDays(d, 1)) if (!off(d)) slots.push(d);
+  const firstSection = slots[0] || newStart;
+  const delta = daysBetween(oldStart, newStart);      // signed day shift of the block's start
+  texts.forEach((text, i) => {
+    let target = addDays(moving[i], delta);
+    if (!slots.includes(target)) target = firstSection;
+    f.dayNotes[target] = (f.dayNotes[target] && f.dayNotes[target].trim())
+      ? f.dayNotes[target] + '\n' + text             // merge if two notes collide on one day
+      : text;
+  });
+}
+
 let dragState = null;
 function blockDown(e, fid, bid) {
   const f = getFeatures().find(x => x.id === fid);
@@ -989,7 +1366,10 @@ document.addEventListener('pointerup', () => {
     const features = getFeatures();
     const f = features.find(x => x.id === ds.fid);
     const b = f && (f.blocks||[]).find(x => x.id === ds.bid);
-    if (b) { b.start = ds.newStart; b.end = ds.newEnd; f.blocks = normalizeBlocks(f.blocks); saveFeatures(features); }
+    if (b) {
+      if (ds.mode === 'move' || ds.mode === 'resize-l') reanchorBlockNotes(f, ds.origStart, ds.origEnd, ds.newStart, ds.newEnd);
+      b.start = ds.newStart; b.end = ds.newEnd; f.blocks = normalizeBlocks(f.blocks); saveFeatures(features);
+    }
     renderTimeline();
   } else {
     const track = ds.el ? ds.el.parentElement : null;
@@ -1345,18 +1725,21 @@ document.getElementById('day-modal-delete').addEventListener('click', () => {
 });
 
 // ── FEATURE MODAL ────────────────────────────────────────
-let editingId = null, selectedTags = [], selectedStatus = 'in_progress';
+let editingId = null, selectedTags = [], selectedStatus = 'in_progress', selectedPrio = '';
 
 function openAdd() {
-  editingId = null; selectedTags = []; selectedStatus = 'in_progress';
+  editingId = null; selectedTags = []; selectedStatus = 'in_progress'; selectedPrio = ''; editLinks = [];
   document.getElementById('modal-title').textContent = 'Add Feature';
   document.getElementById('f-name').value = '';
   document.getElementById('f-pm').value = '';
   document.getElementById('f-notes').value = '';
+  document.getElementById('f-target').value = '';
   document.getElementById('modal-delete').style.display = 'none';
   document.getElementById('err-name').classList.remove('show');
   document.getElementById('err-blocks').classList.remove('show');
   setStatus('in_progress');
+  setPrio('');
+  renderLinksList();
   renderTagsPicker();
   document.getElementById('blocks-list').innerHTML = '';
   addBlockRow({ start: today(), end: today() });
@@ -1367,15 +1750,18 @@ function openAdd() {
 function openEdit(id) {
   const f = getFeatures().find(x => x.id === id);
   if (!f) return;
-  editingId = id; selectedTags = [...f.tags]; selectedStatus = f.status;
+  editingId = id; selectedTags = [...f.tags]; selectedStatus = f.status; selectedPrio = f.priority || ''; editLinks = [...(f.links || [])];
   document.getElementById('modal-title').textContent = 'Edit Feature';
   document.getElementById('f-name').value = f.name;
   document.getElementById('f-pm').value = f.pm || '';
   document.getElementById('f-notes').value = f.notes || '';
+  document.getElementById('f-target').value = f.target || '';
   document.getElementById('modal-delete').style.display = 'block';
   document.getElementById('err-name').classList.remove('show');
   document.getElementById('err-blocks').classList.remove('show');
   setStatus(f.status);
+  setPrio(selectedPrio);
+  renderLinksList();
   renderTagsPicker();
   document.getElementById('blocks-list').innerHTML = '';
   if (f.blocks && f.blocks.length) f.blocks.forEach(b => addBlockRow(b));
@@ -1387,8 +1773,42 @@ function closeModal() { document.getElementById('modal-overlay').classList.remov
 document.getElementById('modal-overlay').addEventListener('click', e => { if (e.target===document.getElementById('modal-overlay')) closeModal(); });
 document.getElementById('modal-cancel').addEventListener('click', closeModal);
 
-function setStatus(val) { selectedStatus = val; document.querySelectorAll('.status-option').forEach(o => o.classList.toggle('active', o.dataset.value===val)); }
+function setStatus(val) {
+  selectedStatus = val;
+  document.querySelectorAll('.status-option').forEach(o => o.classList.toggle('active', o.dataset.value===val));
+  // Backlog items have no blocks yet — hide the block editor for them.
+  document.getElementById('blocks-group').style.display = (val === 'backlog') ? 'none' : '';
+}
 document.querySelectorAll('.status-option').forEach(o => o.addEventListener('click', () => setStatus(o.dataset.value)));
+function setPrio(val) { selectedPrio = val || ''; document.querySelectorAll('.prio-option').forEach(o => o.classList.toggle('active', o.dataset.value===selectedPrio)); }
+document.querySelectorAll('.prio-option').forEach(o => o.addEventListener('click', () => setPrio(o.dataset.value)));
+
+function renderLinksList() {
+  document.getElementById('links-list').innerHTML = '';
+  editLinks.forEach(l => addLinkRow(l));
+}
+function addLinkRow(link) {
+  const list = document.getElementById('links-list');
+  const id = uid();
+  const row = document.createElement('div');
+  row.className = 'link-row'; row.id = 'lr-' + id;
+  row.innerHTML = `
+    <input class="form-input lr-url" type="text" id="lurl-${id}" placeholder="https://…" value="${escapeAttr(link?.url || '')}">
+    <input class="form-input" type="text" id="llabel-${id}" placeholder="Label (optional)" value="${escapeAttr(link?.label || '')}">
+    <button class="del-block-btn" onclick="document.getElementById('lr-${id}').remove()" title="Remove link">×</button>`;
+  list.appendChild(row);
+}
+document.getElementById('add-link-btn').addEventListener('click', () => addLinkRow({ url: '', label: '' }));
+function getLinksFromForm() {
+  return [...document.querySelectorAll('#links-list .link-row')].map(row => {
+    const id = row.id.replace('lr-', '');
+    let url = document.getElementById('lurl-' + id)?.value.trim() || '';
+    const label = document.getElementById('llabel-' + id)?.value.trim() || '';
+    if (url && !/^https?:\/\//i.test(url)) url = 'https://' + url;
+    return { url, label };
+  }).filter(l => l.url);
+}
+let editLinks = [];
 
 function renderTagsPicker() {
   const tags = getTags();
@@ -1439,19 +1859,23 @@ function getBlocksFromForm() {
 
 document.getElementById('modal-save').addEventListener('click', () => {
   const name = document.getElementById('f-name').value.trim();
+  const isBacklog = selectedStatus === 'backlog';
   let valid = true;
   if (!name) { document.getElementById('err-name').classList.add('show'); valid = false; }
   else document.getElementById('err-name').classList.remove('show');
   const rawBlocks = getBlocksFromForm();
   const badBlock = rawBlocks.some(b => b.end && b.end < b.start);
-  if (badBlock || rawBlocks.length === 0) { document.getElementById('err-blocks').classList.add('show'); valid = false; }
+  // Backlog items have no blocks; only validate blocks for non-backlog statuses.
+  if (!isBacklog && (badBlock || rawBlocks.length === 0)) { document.getElementById('err-blocks').classList.add('show'); valid = false; }
   else document.getElementById('err-blocks').classList.remove('show');
   if (!valid) return;
 
-  const blocks = normalizeBlocks(rawBlocks); // split around weekends
+  const blocks = isBacklog ? [] : normalizeBlocks(rawBlocks); // split around weekends
   const features = getFeatures();
   const pm = document.getElementById('f-pm').value.trim() || null;
-  const data = { name, tags: selectedTags, status: selectedStatus, blocks, pm, notes: document.getElementById('f-notes').value.trim() };
+  const data = { name, tags: selectedTags, status: selectedStatus, priority: selectedPrio || null,
+                 links: getLinksFromForm(), target: document.getElementById('f-target').value || null,
+                 blocks, pm, notes: document.getElementById('f-notes').value.trim() };
   if (editingId) {
     const idx = features.findIndex(f => f.id===editingId);
     if (idx > -1) features[idx] = { ...features[idx], ...data };

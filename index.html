@@ -660,14 +660,22 @@ function setSyncStatus(s) {
   el.textContent = { saving: 'Saving…', saved: 'Saved ✓', offline: 'Offline — will retry' }[s] || '';
   el.dataset.state = s || '';
 }
+// deterministic JSON with sorted keys — so two semantically-equal objects compare equal
+// even when Supabase's jsonb storage returns the keys in a different order.
+function stableStringify(v) {
+  if (Array.isArray(v)) return '[' + v.map(stableStringify).join(',') + ']';
+  if (v && typeof v === 'object') return '{' + Object.keys(v).sort().map(k => JSON.stringify(k) + ':' + stableStringify(v[k])).join(',') + '}';
+  return JSON.stringify(v);
+}
 // never destroy non-empty local data in place — stash a timestamped copy first.
 // skips no-op backups (local already equals the cloud snapshot we're adopting) and keeps only the last 5.
 function backupLocalIfNeeded(incoming) {
-  const localFeatures = getFeatures();
-  if (localFeatures.length === 0) return;
-  if (incoming && JSON.stringify(incoming.features || []) === JSON.stringify(localFeatures)) return; // nothing meaningful to preserve
+  const local = localSnapshot();
+  if ((local.features || []).length === 0) return;
+  // nothing meaningful to preserve if local already matches the incoming cloud snapshot (key-order-insensitive)
+  if (incoming && stableStringify(local) === stableStringify({ features: incoming.features || [], tags: incoming.tags || [], holidays: incoming.holidays || {} })) return;
   try {
-    rawSave('wt_local_backup_' + new Date().toISOString().replace(/[:.]/g, '-'), localSnapshot());
+    rawSave('wt_local_backup_' + new Date().toISOString().replace(/[:.]/g, '-'), local);
     const keys = Object.keys(localStorage).filter(k => k.startsWith('wt_local_backup_')).sort(); // ISO keys sort chronologically
     while (keys.length > 5) localStorage.removeItem(keys.shift());
   } catch {}

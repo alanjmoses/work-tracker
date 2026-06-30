@@ -660,15 +660,22 @@ function setSyncStatus(s) {
   el.textContent = { saving: 'Saving…', saved: 'Saved ✓', offline: 'Offline — will retry' }[s] || '';
   el.dataset.state = s || '';
 }
-// never destroy non-empty local data in place — stash a timestamped copy first
-function backupLocalIfNeeded() {
-  if (getFeatures().length === 0) return;
-  try { rawSave('wt_local_backup_' + new Date().toISOString().replace(/[:.]/g, '-'), localSnapshot()); } catch {}
+// never destroy non-empty local data in place — stash a timestamped copy first.
+// skips no-op backups (local already equals the cloud snapshot we're adopting) and keeps only the last 5.
+function backupLocalIfNeeded(incoming) {
+  const localFeatures = getFeatures();
+  if (localFeatures.length === 0) return;
+  if (incoming && JSON.stringify(incoming.features || []) === JSON.stringify(localFeatures)) return; // nothing meaningful to preserve
+  try {
+    rawSave('wt_local_backup_' + new Date().toISOString().replace(/[:.]/g, '-'), localSnapshot());
+    const keys = Object.keys(localStorage).filter(k => k.startsWith('wt_local_backup_')).sort(); // ISO keys sort chronologically
+    while (keys.length > 5) localStorage.removeItem(keys.shift());
+  } catch {}
 }
 // write a cloud snapshot into the local cache WITHOUT triggering a push back
 function adoptSnapshot(data) {
   if (!data) return;
-  backupLocalIfNeeded();
+  backupLocalIfNeeded(data);
   if (Array.isArray(data.features)) rawSave('wt_features', data.features);
   if (Array.isArray(data.tags)) rawSave('wt_tags', data.tags);
   if (data.holidays && typeof data.holidays === 'object') rawSave('wt_holidays', data.holidays);

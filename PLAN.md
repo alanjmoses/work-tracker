@@ -109,7 +109,8 @@ plus one-time migration flags (`ONE_TIME_FLAGS`). `load()`/`rawSave()` are the l
 - **Freshness:** Supabase Realtime subscription on the user's row + a pull on `window` focus; existing
   cross-tab `storage` listener retained. Conflict policy: last-write-wins by `updated_at` (single user).
 - **No data loss:** `bootData` never blindly clobbers — cloud-null pushes local up; both-non-empty keeps
-  the larger set; and `adoptSnapshot` stashes a `wt_local_backup_<ts>` copy before overwriting local.
+  the larger set; and `adoptSnapshot` stashes a `wt_local_backup_<ts>` copy before overwriting local
+  (only when local actually differs from the incoming cloud snapshot, keeping just the last 5).
   The JSON export/import remains as a manual, fully-reversible backup path.
 
 **Hosting:** deployed as a static page on GitHub Pages (`alanjmoses/work-tracker` →

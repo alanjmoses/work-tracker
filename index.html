@@ -233,6 +233,7 @@
   .g-drag-handle { position: absolute; top: 50%; right: 6px; transform: translateY(-50%); font-size: 13px; line-height: 1; color: var(--text-muted); opacity: 0; transition: opacity 0.15s; pointer-events: none; user-select: none; letter-spacing: -1px; }
   .g-done-check { position: absolute; top: 50%; right: 6px; transform: translateY(-50%); font-size: 13px; font-weight: 800; line-height: 1; color: var(--status-done); opacity: 1; transition: opacity 0.15s; pointer-events: none; user-select: none; }
   .g-name:hover .g-done-check { opacity: 0; }
+  .g-feature-row.g-done-row .g-name { background: #E8F7EF; } /* light-green tinge for completed features */
   .g-feature-row.row-dragging { position: relative; z-index: 30; opacity: 0.97; background: var(--surface); box-shadow: 0 10px 28px rgba(0,0,0,0.18); pointer-events: none; transition: box-shadow 0.12s ease; will-change: transform; }
   .g-feature-row.row-dragging .g-name { cursor: grabbing; background: var(--surface); }
   .g-feature-row.row-dragging .g-drag-handle { opacity: 0.8; }
@@ -1438,7 +1439,7 @@ function renderTimeline() {
       ? `<div class="tags-collapsed" tabindex="0">${brands.map(b => `<img class="brand-badge" src="Assets/Icons/${b}_Symbol.svg" alt="${b}">`).join('')}${customCount > 0 ? `<span class="tags-more">+${customCount}</span>` : ''}<div class="tags-popover">${f.tags.map(t => tagChipHTML(t)).join('')}</div></div>`
       : '';
     const metaLine = `${workedDays}d worked${f.pm ? ` | PM: ${escapeHTML(f.pm)}` : ''}`;
-    html += `<div class="g-row g-feature-row" data-fid="${f.id}">
+    html += `<div class="g-row g-feature-row${f.status === 'done' ? ' g-done-row' : ''}" data-fid="${f.id}">
       <div class="g-name" onpointerdown="rowDragDown(event,'${f.id}')" title="Drag to reorder">
         <span class="g-drag-handle" aria-hidden="true">⠿</span>
         ${f.status === 'done' ? '<span class="g-done-check" title="Done" aria-label="Done">✓</span>' : ''}

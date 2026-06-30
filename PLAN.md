@@ -82,7 +82,38 @@ index.html
   └── <script>      All JS — data layer, rendering, interactions
 ```
 
-No external dependencies. Pure HTML, CSS, JS.
+One external dependency: the Supabase JS client (loaded from CDN) for optional cloud sync. The app still works as a pure local app when sync is unconfigured.
+
+---
+
+## Data Storage & Cloud Sync
+
+**Local cache (always):** state lives in `localStorage` under `wt_features`, `wt_tags`, `wt_holidays`,
+plus one-time migration flags (`ONE_TIME_FLAGS`). `load()`/`rawSave()` are the low-level accessors;
+`save()` writes the cache synchronously **and** schedules a debounced cloud push.
+
+**Cloud (Supabase, optional):** the source of truth when configured.
+- **Config:** `SUPABASE_URL` + `SUPABASE_ANON` constants near the top of `<script>`. While they hold
+  the `__PLACEHOLDER__` values, `SYNC_ENABLED` is false and the app behaves as before (no login, no
+  network). The anon key is public by design; row-level security protects the data.
+- **Schema:** one table `app_state(user_id uuid pk, data jsonb, updated_at timestamptz)`, RLS policy
+  `auth.uid() = user_id`. The whole snapshot `{features, tags, holidays}` is stored as one JSONB row
+  per user (same shape as the JSON export).
+- **Auth:** email magic-link (`signInWithOtp`). `#auth-screen` overlay gates the app; session persists
+  per device. A **Sign out** button sits in the nav.
+- **Boot (`bootData`):** after auth, hydrate from the cloud row, then run the normal INIT
+  (`seedIfEmpty → … → renderView`). Adopting cloud data sets `ONE_TIME_FLAGS` so seeds/backfills never
+  re-run on authoritative data.
+- **Push:** `save()` → `schedulePush()` (~1s debounce) → `pushNow()` upserts the snapshot.
+  `#sync-status` shows `Saving… / Saved ✓ / Offline`.
+- **Freshness:** Supabase Realtime subscription on the user's row + a pull on `window` focus; existing
+  cross-tab `storage` listener retained. Conflict policy: last-write-wins by `updated_at` (single user).
+- **No data loss:** `bootData` never blindly clobbers — cloud-null pushes local up; both-non-empty keeps
+  the larger set; and `adoptSnapshot` stashes a `wt_local_backup_<ts>` copy before overwriting local.
+  The JSON export/import remains as a manual, fully-reversible backup path.
+
+**Hosting:** deployed as a static page on GitHub Pages (`alanjmoses/work-tracker` →
+`https://alanjmoses.github.io/work-tracker/`), which is the redirect URL allow-listed in Supabase Auth.
 
 ---
 

@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Work Tracker</title>
+<!-- Supabase JS client (cloud sync). Safe to load even when sync is unconfigured. -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root {
     --bg: #F7F6F3;
@@ -46,6 +48,18 @@
   .nav-actions { display: flex; gap: 6px; }
   .nav-action { padding: 6px 11px; border-radius: 8px; cursor: pointer; background: none; border: 1px solid var(--border); color: var(--text-muted); font-size: 12px; font-weight: 600; font-family: inherit; transition: all 0.15s; }
   .nav-action:hover { color: var(--text); background: var(--surface2); }
+  /* ── cloud sync UI ── */
+  #sync-status { font-size: 11px; font-weight: 600; color: var(--text-muted); align-self: center; min-width: 84px; text-align: right; }
+  #sync-status[data-state="offline"] { color: #E5484D; }
+  #sync-status[data-state="saved"] { color: #1BC47D; }
+  #auth-screen { position: fixed; inset: 0; z-index: 9999; display: none; align-items: center; justify-content: center; background: var(--bg); }
+  #auth-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 32px; width: 320px; box-shadow: 0 8px 30px rgba(0,0,0,0.08); }
+  #auth-card h2 { margin: 0 0 6px; font-size: 18px; color: var(--text); }
+  #auth-card p { margin: 0 0 18px; color: var(--text-muted); font-size: 13px; line-height: 1.5; }
+  #auth-email { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; font-family: inherit; font-size: 14px; box-sizing: border-box; margin-bottom: 10px; }
+  #auth-send { width: 100%; padding: 10px; border: none; border-radius: 8px; background: #7B61FF; color: #fff; font-weight: 600; font-family: inherit; cursor: pointer; font-size: 14px; }
+  #auth-send:disabled { opacity: 0.6; cursor: default; }
+  #auth-status { margin-top: 12px; font-size: 12px; color: var(--text-muted); min-height: 16px; }
   .nav-tabs { display: flex; gap: 2px; }
   .nav-tab { padding: 6px 16px; border-radius: 8px; cursor: pointer; color: var(--text); background: var(--surface2); font-size: 13px; font-weight: 500; transition: all 0.15s; border: none; }
   .nav-tab:hover { background: #E8E4DC; }
@@ -332,6 +346,17 @@
 </head>
 <body>
 
+<!-- Cloud-sync login gate (shown only when sync is configured and no session) -->
+<div id="auth-screen">
+  <div id="auth-card">
+    <h2>Work Tracker</h2>
+    <p>Sign in with your email to load your tracker. We'll send you a one-time magic link — no password.</p>
+    <input type="email" id="auth-email" placeholder="you@example.com" autocomplete="email">
+    <button id="auth-send">Send magic link</button>
+    <div id="auth-status"></div>
+  </div>
+</div>
+
 <nav>
   <span class="nav-logo"><span class="nav-logo-dot"></span>Work Tracker</span>
   <div class="nav-right">
@@ -346,6 +371,8 @@
       <button class="nav-action" id="export-btn" title="Download a JSON backup of all data">Export</button>
       <button class="nav-action" id="import-btn" title="Restore data from a JSON backup">Import</button>
       <input type="file" id="import-file" accept=".json,application/json" hidden>
+      <span id="sync-status" title="Cloud sync status"></span>
+      <button class="nav-action" id="signout-btn" title="Sign out of cloud sync" style="display:none">Sign out</button>
     </div>
   </div>
 </nav>
@@ -605,12 +632,154 @@ const DAY_W = 96; // px per weekday column
 
 // ── DATA LAYER ──────────────────────────────────────────
 function load(key, fallback) { try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; } }
-function save(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
+function rawSave(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
+// every save writes the local cache synchronously, then schedules a debounced push to the cloud
+function save(key, val) { rawSave(key, val); schedulePush(); }
 function getFeatures() { return load('wt_features', []); }
 function saveFeatures(f) { save('wt_features', f); }
 function getTags() { const s = load('wt_tags', null); if (!s) { save('wt_tags', DEFAULT_TAGS); return DEFAULT_TAGS; } return s; }
 function saveTags(t) { save('wt_tags', t); }
 function uid() { return Math.random().toString(36).slice(2) + Date.now().toString(36); }
+
+// ── CLOUD SYNC (Supabase) ───────────────────────────────
+// localStorage stays the working store; Supabase is the source of truth, synced on load + on save.
+// To enable: replace the two placeholders below with your Supabase Project URL + anon (public) key.
+const SUPABASE_URL  = 'https://wuhgunlsbkpsanbxnjfr.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind1aGd1bmxzYmtwc2FuYnhuamZyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4MjcwOTMsImV4cCI6MjA5ODQwMzA5M30.uB54zuNdi6dJbTR_N4NXha0XuzpFpzTOi86f3a40Grs';
+const SYNC_ENABLED = !SUPABASE_URL.startsWith('__') && !SUPABASE_ANON.startsWith('__') && !!window.supabase;
+const sb = SYNC_ENABLED ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON) : null;
+
+let currentUser = null;       // Supabase auth user, or null
+let booted = false;           // bootData() has run for this session
+let appliedUpdatedAt = null;  // updated_at of the snapshot currently reflected locally
+let pushTimer = null, pushFailed = false;
+
+function localSnapshot() { return { features: getFeatures(), tags: getTags(), holidays: getHolidays() }; }
+function setSyncStatus(s) {
+  const el = document.getElementById('sync-status'); if (!el) return;
+  el.textContent = { saving: 'Saving…', saved: 'Saved ✓', offline: 'Offline — will retry' }[s] || '';
+  el.dataset.state = s || '';
+}
+// never destroy non-empty local data in place — stash a timestamped copy first
+function backupLocalIfNeeded() {
+  if (getFeatures().length === 0) return;
+  try { rawSave('wt_local_backup_' + new Date().toISOString().replace(/[:.]/g, '-'), localSnapshot()); } catch {}
+}
+// write a cloud snapshot into the local cache WITHOUT triggering a push back
+function adoptSnapshot(data) {
+  if (!data) return;
+  backupLocalIfNeeded();
+  if (Array.isArray(data.features)) rawSave('wt_features', data.features);
+  if (Array.isArray(data.tags)) rawSave('wt_tags', data.tags);
+  if (data.holidays && typeof data.holidays === 'object') rawSave('wt_holidays', data.holidays);
+  // cloud data is authoritative — don't re-run seeds/backfills on it (mirrors the import path)
+  ONE_TIME_FLAGS.forEach(k => localStorage.setItem(k, '1'));
+}
+function schedulePush() {
+  if (!SYNC_ENABLED || !currentUser) return;
+  setSyncStatus('saving');
+  clearTimeout(pushTimer);
+  pushTimer = setTimeout(pushNow, 1000);
+}
+async function pushNow() {
+  if (!SYNC_ENABLED || !currentUser) return;
+  clearTimeout(pushTimer);
+  const stamp = new Date().toISOString();
+  const { error } = await sb.from('app_state').upsert({ user_id: currentUser.id, data: localSnapshot(), updated_at: stamp });
+  if (error) { pushFailed = true; setSyncStatus('offline'); }
+  else { pushFailed = false; appliedUpdatedAt = stamp; setSyncStatus('saved'); }
+}
+async function pullRemote(force) {
+  if (!SYNC_ENABLED || !currentUser) return;
+  if (pushFailed) pushNow();   // also retry a failed push when we regain focus
+  const { data, error } = await sb.from('app_state').select('data, updated_at').eq('user_id', currentUser.id).maybeSingle();
+  if (error || !data) return;
+  if (!force && appliedUpdatedAt && data.updated_at <= appliedUpdatedAt) return;
+  adoptSnapshot(data.data); appliedUpdatedAt = data.updated_at; renderView();
+}
+let realtimeChan = null;
+function subscribeRealtime() {
+  if (realtimeChan || !SYNC_ENABLED || !currentUser) return;
+  realtimeChan = sb.channel('app_state_' + currentUser.id)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'app_state', filter: 'user_id=eq.' + currentUser.id }, payload => {
+      const row = payload.new;
+      if (row && row.updated_at && (!appliedUpdatedAt || row.updated_at > appliedUpdatedAt)) {
+        adoptSnapshot(row.data); appliedUpdatedAt = row.updated_at; renderView();
+      }
+    }).subscribe();
+}
+
+// decide cloud-vs-local on first load (no data loss), then run the normal INIT
+async function bootData() {
+  if (SYNC_ENABLED && currentUser) {
+    try {
+      const { data } = await sb.from('app_state').select('data, updated_at').eq('user_id', currentUser.id).maybeSingle();
+      const cloudFeatures = data && data.data && data.data.features;
+      const cloudHas = Array.isArray(cloudFeatures) && cloudFeatures.length > 0;
+      const localHas = getFeatures().length > 0;
+      if (!data || !cloudHas) {
+        await pushNow();                              // no/empty cloud row → seed it from this browser
+      } else if (!localHas) {
+        adoptSnapshot(data.data); appliedUpdatedAt = data.updated_at;          // fresh device → take cloud
+      } else if (cloudFeatures.length >= getFeatures().length) {
+        adoptSnapshot(data.data); appliedUpdatedAt = data.updated_at;          // both have data → keep larger (cloud), back up local
+        showToast('Loaded from cloud — a local backup was saved');
+      } else {
+        backupLocalIfNeeded(); await pushNow();       // this browser has more → keep it, push up
+        showToast("Kept this browser's data — pushed to cloud");
+      }
+    } catch (e) { setSyncStatus('offline'); }
+  }
+  // ── normal INIT (runs after hydration) ──
+  seedIfEmpty();
+  migrateFeatures();
+  restoreSeedOnce();
+  splitWeekendsOnce();
+  importFigjamOnce();
+  backfillPMsOnce();
+  renderView();
+  if (SYNC_ENABLED && currentUser) { subscribeRealtime(); pushNow(); }  // capture any migration changes
+}
+
+// auth gate
+function handleSession(session) {
+  currentUser = (session && session.user) || null;
+  const screen = document.getElementById('auth-screen');
+  const signout = document.getElementById('signout-btn');
+  if (currentUser) {
+    screen.style.display = 'none';
+    if (signout) signout.style.display = '';
+    if (!booted) { booted = true; bootData(); }
+  } else {
+    if (screen) screen.style.display = 'flex';
+    if (signout) signout.style.display = 'none';
+    booted = false;
+  }
+}
+async function initAuth() {
+  if (!SYNC_ENABLED) {            // sync not configured yet — run as a pure local app
+    const screen = document.getElementById('auth-screen'); if (screen) screen.style.display = 'none';
+    bootData();
+    return;
+  }
+  sb.auth.onAuthStateChange((_e, session) => handleSession(session));
+  const { data: { session } } = await sb.auth.getSession();
+  handleSession(session);
+  // wire the login form + sign-out
+  const sendBtn = document.getElementById('auth-send'), emailEl = document.getElementById('auth-email'), statusEl = document.getElementById('auth-status');
+  async function sendLink() {
+    const email = (emailEl.value || '').trim();
+    if (!email) { statusEl.textContent = 'Enter your email.'; return; }
+    sendBtn.disabled = true; statusEl.textContent = 'Sending…';
+    const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: location.href.split('#')[0] } });
+    sendBtn.disabled = false;
+    statusEl.textContent = error ? ('Error: ' + error.message) : 'Check your email for the magic link.';
+  }
+  sendBtn.addEventListener('click', sendLink);
+  emailEl.addEventListener('keydown', e => { if (e.key === 'Enter') sendLink(); });
+  document.getElementById('signout-btn').addEventListener('click', () => sb.auth.signOut());
+  window.addEventListener('focus', () => pullRemote(false));
+}
 
 // ── DATE HELPERS (local, no UTC drift) ──────────────────
 function localISO(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
@@ -2235,13 +2404,9 @@ function importFigjamOnce() {
 }
 
 // ── INIT ─────────────────────────────────────────────────
-seedIfEmpty();
-migrateFeatures();
-restoreSeedOnce();
-splitWeekendsOnce();
-importFigjamOnce();
-backfillPMsOnce();
-renderView();
+// When cloud sync is configured, initAuth() shows the login gate, then bootData() runs the
+// migrations + first render after hydrating from Supabase. When unconfigured, it runs them now.
+initAuth();
 </script>
 </body>
 </html>

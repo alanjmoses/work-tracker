@@ -671,26 +671,30 @@ function stableStringify(v) {
 }
 // never destroy non-empty local data in place — stash a timestamped copy first.
 // skips no-op backups (local already equals the cloud snapshot we're adopting) and keeps only the last 5.
+// returns true only if a backup was actually written (i.e. local genuinely differed from the cloud).
 function backupLocalIfNeeded(incoming) {
   const local = localSnapshot();
-  if ((local.features || []).length === 0) return;
+  if ((local.features || []).length === 0) return false;
   // nothing meaningful to preserve if local already matches the incoming cloud snapshot (key-order-insensitive)
-  if (incoming && stableStringify(local) === stableStringify({ features: incoming.features || [], tags: incoming.tags || [], holidays: incoming.holidays || {} })) return;
+  if (incoming && stableStringify(local) === stableStringify({ features: incoming.features || [], tags: incoming.tags || [], holidays: incoming.holidays || {} })) return false;
   try {
     rawSave('wt_local_backup_' + new Date().toISOString().replace(/[:.]/g, '-'), local);
     const keys = Object.keys(localStorage).filter(k => k.startsWith('wt_local_backup_')).sort(); // ISO keys sort chronologically
     while (keys.length > 5) localStorage.removeItem(keys.shift());
-  } catch {}
+    return true;
+  } catch { return false; }
 }
-// write a cloud snapshot into the local cache WITHOUT triggering a push back
+// write a cloud snapshot into the local cache WITHOUT triggering a push back.
+// returns true if a local backup was made (i.e. local diverged from cloud).
 function adoptSnapshot(data) {
-  if (!data) return;
-  backupLocalIfNeeded(data);
+  if (!data) return false;
+  const backedUp = backupLocalIfNeeded(data);
   if (Array.isArray(data.features)) rawSave('wt_features', data.features);
   if (Array.isArray(data.tags)) rawSave('wt_tags', data.tags);
   if (data.holidays && typeof data.holidays === 'object') rawSave('wt_holidays', data.holidays);
   // cloud data is authoritative — don't re-run seeds/backfills on it (mirrors the import path)
   ONE_TIME_FLAGS.forEach(k => localStorage.setItem(k, '1'));
+  return backedUp;
 }
 function schedulePush() {
   if (!SYNC_ENABLED || !currentUser) return;
@@ -739,8 +743,8 @@ async function bootData() {
       } else if (!localHas) {
         adoptSnapshot(data.data); appliedUpdatedAt = data.updated_at;          // fresh device → take cloud
       } else if (cloudFeatures.length >= getFeatures().length) {
-        adoptSnapshot(data.data); appliedUpdatedAt = data.updated_at;          // both have data → keep larger (cloud), back up local
-        showToast('Loaded from cloud — a local backup was saved');
+        const backedUp = adoptSnapshot(data.data); appliedUpdatedAt = data.updated_at;   // both have data → keep cloud
+        if (backedUp) showToast('Loaded cloud data — your differing local copy was backed up');  // silent on a normal refresh (local == cloud)
       } else {
         backupLocalIfNeeded(); await pushNow();       // this browser has more → keep it, push up
         showToast("Kept this browser's data — pushed to cloud");

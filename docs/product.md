@@ -80,7 +80,8 @@ Tasks **without** a `target` stay on the Tasks page and don't appear in Focus. W
 - The **gantt area has its own scroll container** (max-height ≈ viewport − 200px). Month + day-header rows
   stick to top; the feature-name column stays sticky left across the full horizontal scroll
   (`.gantt-grid` uses `width: max-content`).
-- Navigation: prev/next period arrows. Filter by tag.
+- Navigation: prev/next period arrows; a **Today** button jumps the anchor to the current period and
+  horizontally scrolls so today's column is centred in view (`scrollTimelineToToday`). Filter by tag.
 
 ### Add / Edit Feature modal
 **Fields:** Name (required) · Product Manager (free text) · Tags (multi-select + inline "Add new tag") ·
@@ -88,6 +89,12 @@ Status (segmented: **Backlog** / In Progress / Done / On Hold — Backlog hides 
 skips block validation) · Priority (None / P1 / P2 / P3) · Links (dynamic URL + optional label rows) ·
 Target date (drives Focus's This week / Overdue) · Work blocks (dynamic start/end rows) · Notes (general
 context, not the daily log). **Actions:** Save / Cancel / Delete (edit only).
+
+**Name autocomplete & resume:** the Name field suggests every existing feature (a `<datalist>`). In
+**Add** mode, if the typed name **exactly matches** an existing feature (case-insensitive), the modal
+silently switches to *editing* that feature — reusing the same record rather than creating a duplicate,
+so a paused/On-Hold feature can be picked back up later. A transient "Resuming …" toast confirms; no
+persistent link UI is shown. (No effect when already editing a specific feature.)
 
 **Validation:** Name required; at least one block with a start; a block's end can't precede its start.
 
@@ -109,6 +116,10 @@ A **Working / Holiday** toggle:
 - **Persistence:** every save/delete writes to `localStorage` instantly (no explicit save button) and
   syncs to the cloud when configured.
 - **Multi-tab:** a `storage` listener re-renders when another tab changes the data.
+- **Dismiss keyboard (touch only):** on touch devices, focusing any text field shows a small floating
+  "close keyboard" button (keyboard glyph + down chevron) pinned bottom-right (clearing the iOS safe
+  area). Tapping it blurs the field so the on-screen keyboard slides away; it hides when no text field
+  is focused. Never shown on desktop/mouse devices.
 - **Export / Import (nav bar):** Export downloads `work-tracker-backup-YYYY-MM-DD.json` (features, tags,
   holidays, version, exportedAt). Import validates, confirms, then **replaces** all data (undo toast), and
   sets the one-time migration flags so seed/backfill routines don't re-run over imported data.

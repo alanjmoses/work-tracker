@@ -340,6 +340,14 @@
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: auto; }
   .toast button { background: none; border: none; color: #B8A9FF; font-weight: 700; font-size: 13px; cursor: pointer; padding: 2px 4px; }
   .toast button:hover { color: #fff; }
+  /* Floating "dismiss keyboard" button — only shown on touch devices while a field is focused */
+  .kb-dismiss { position: fixed; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 500;
+    width: 46px; height: 46px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface);
+    color: var(--accent); box-shadow: 0 6px 20px rgba(0,0,0,0.18); cursor: pointer; padding: 0;
+    display: none; align-items: center; justify-content: center; -webkit-tap-highlight-color: transparent; }
+  .kb-dismiss.show { display: flex; }
+  .kb-dismiss:active { background: var(--surface2); }
+  .kb-dismiss svg { display: block; }
 
   ::-webkit-scrollbar { width: 8px; height: 8px; }
   ::-webkit-scrollbar-track { background: transparent; }
@@ -489,7 +497,8 @@
 
     <div class="form-group">
       <label class="form-label">Feature Name *</label>
-      <input class="form-input" id="f-name" type="text" placeholder="e.g. FD Details Redesign">
+      <input class="form-input" id="f-name" type="text" placeholder="e.g. FD Details Redesign" list="f-name-list" autocomplete="off">
+      <datalist id="f-name-list"></datalist>
       <p class="error-msg" id="err-name">Name is required</p>
     </div>
 
@@ -623,6 +632,15 @@
 
 <!-- TOAST -->
 <div class="toast" id="toast"><span id="toast-msg"></span><button id="toast-undo">Undo</button></div>
+
+<!-- DISMISS KEYBOARD (touch only, while a text field is focused) -->
+<button class="kb-dismiss" id="kb-dismiss" type="button" aria-label="Close keyboard" title="Close keyboard">
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <rect x="2" y="4" width="20" height="11" rx="2"></rect>
+    <path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M8 11.5h8"></path>
+    <path d="M9 19l3 3 3-3"></path>
+  </svg>
+</button>
 
 
 <script>
@@ -1678,7 +1696,21 @@ document.addEventListener('click', e => {
 function shiftPeriod(months) { tlAnchor.setDate(1); tlAnchor.setMonth(tlAnchor.getMonth() + months); renderTimeline(); }
 document.getElementById('tl-prev').addEventListener('click', () => shiftPeriod(tlRange === 'month' ? -1 : -3));
 document.getElementById('tl-next').addEventListener('click', () => shiftPeriod(tlRange === 'month' ? 1 : 3));
-document.getElementById('tl-today').addEventListener('click', () => { tlAnchor = new Date(); renderTimeline(); });
+// Scroll the gantt so today's column is centred in the visible track (past the 200px sticky
+// Feature column). Runs after render so the DOM/layout is in place.
+function scrollTimelineToToday() {
+  const wrap = document.querySelector('.gantt-wrap');
+  if (!wrap) return;
+  const { start, end } = tlStartEnd();
+  const days = dateRange(start, end);
+  const idx = days.findIndex(d => localISO(d) === today());
+  if (idx < 0) return;
+  const NAME_W = 200; // .g-name sticky width
+  const colCenter = idx * DAY_W + DAY_W / 2;
+  const left = Math.max(0, colCenter - (wrap.clientWidth - NAME_W) / 2);
+  requestAnimationFrame(() => wrap.scrollTo({ left, behavior: 'smooth' }));
+}
+document.getElementById('tl-today').addEventListener('click', () => { tlAnchor = new Date(); renderTimeline(); scrollTimelineToToday(); });
 document.querySelectorAll('.toggle-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     tlRange = btn.dataset.range;
@@ -1918,8 +1950,36 @@ document.getElementById('day-modal-delete').addEventListener('click', () => {
 // ── FEATURE MODAL ────────────────────────────────────────
 let editingId = null, selectedTags = [], selectedStatus = 'in_progress', selectedPrio = '';
 
+// Fill the name field's <datalist> with every existing feature name, so typing in
+// Add Feature suggests past features. An exact match resumes that feature (see below).
+function populateFeatureNameList() {
+  const dl = document.getElementById('f-name-list');
+  if (!dl) return;
+  // De-dupe by name, newest-order preserved; skip blanks.
+  const seen = new Set();
+  dl.innerHTML = getFeatures().map(f => (f.name || '').trim()).filter(n => {
+    if (!n || seen.has(n.toLowerCase())) return false;
+    seen.add(n.toLowerCase()); return true;
+  }).map(n => `<option value="${escapeAttr(n)}"></option>`).join('');
+}
+
+// In Add mode, if the typed name exactly matches an existing feature, switch to editing
+// that feature — so pausing a feature and picking it up later reuses the same record
+// instead of creating a duplicate. Fires on blur / datalist pick (before the Save click).
+document.getElementById('f-name').addEventListener('change', e => {
+  if (editingId) return; // already tied to a specific feature
+  const val = e.target.value.trim().toLowerCase();
+  if (!val) return;
+  const match = getFeatures().find(f => (f.name || '').trim().toLowerCase() === val);
+  if (match) {
+    openEdit(match.id);
+    showToast(`Resuming “${match.name}” — changes update the existing feature`);
+  }
+});
+
 function openAdd() {
   editingId = null; selectedTags = []; selectedStatus = 'in_progress'; selectedPrio = ''; editLinks = [];
+  populateFeatureNameList();
   document.getElementById('modal-title').textContent = 'Add Feature';
   document.getElementById('f-name').value = '';
   document.getElementById('f-pm').value = '';
@@ -2116,6 +2176,29 @@ function showToast(msg, undoFn) {
 }
 function hideToast() { document.getElementById('toast').classList.remove('show'); toastUndo = null; }
 document.getElementById('toast-undo').addEventListener('click', () => { if (toastUndo) toastUndo(); hideToast(); });
+
+// ── DISMISS-KEYBOARD BUTTON (touch only) ─────────────────
+// On touch devices, show a floating "close keyboard" button while a text field is focused;
+// tapping it blurs the field so the on-screen keyboard slides away (iOS-style dismiss).
+(function () {
+  const btn = document.getElementById('kb-dismiss');
+  const isTouch = window.matchMedia('(pointer: coarse)').matches || ('ontouchstart' in window);
+  if (!btn || !isTouch) return;
+  const isEditable = el => !!el && (el.tagName === 'TEXTAREA' ||
+    (el.tagName === 'INPUT' && !['button','checkbox','radio','submit','reset','range','color','file'].includes((el.type || 'text').toLowerCase())));
+  document.addEventListener('focusin', e => { if (isEditable(e.target)) btn.classList.add('show'); });
+  document.addEventListener('focusout', () => {
+    // Hide unless focus lands on another editable field (defer so activeElement settles).
+    setTimeout(() => { if (!isEditable(document.activeElement)) btn.classList.remove('show'); }, 0);
+  });
+  // preventDefault keeps the field focused until we blur it explicitly (so the button never steals focus).
+  btn.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    const el = document.activeElement;
+    if (el && typeof el.blur === 'function') el.blur();
+    btn.classList.remove('show');
+  });
+})();
 
 // ── ESCAPING ─────────────────────────────────────────────
 function escapeHTML(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }

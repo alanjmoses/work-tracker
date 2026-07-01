@@ -2,6 +2,21 @@
 
 Dated record of notable changes. Most recent first.
 
+## 2026-07-01 — Resume features by name + jump-to-today
+
+- **Add Feature name autocomplete:** the name field is now backed by a `<datalist>` of every existing
+  feature name, so typing suggests past features.
+- **Exact match resumes the feature:** in Add mode, typing (or picking) a name that exactly matches an
+  existing feature (case-insensitive) switches the modal to *editing* that feature instead of creating a
+  duplicate — so you can pause a feature (e.g. On Hold) and pick it up later against the same record. A
+  transient toast confirms ("Resuming …"); no persistent link UI is shown.
+- **Timeline "Today" scrolls to today:** clicking **Today** now jumps the anchor to the current period
+  *and* horizontally scrolls the gantt so today's column is centred in the visible track
+  (`scrollTimelineToToday`).
+- **Dismiss-keyboard button (touch only):** focusing a text field on a touch device shows a small
+  floating keyboard-with-down-chevron button (bottom-right, safe-area aware); tapping it blurs the field
+  to close the on-screen keyboard. Hidden on desktop/mouse devices.
+
 ## 2026-06-30 — Cloud sync, hosting, and polish
 
 Moved the app from browser-only `localStorage` to hosted, synced storage, then ironed out the rough

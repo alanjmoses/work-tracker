@@ -110,8 +110,9 @@ A **Working / Holiday** toggle:
 ## Interactions & UX details
 
 - **Navigation:** clicking nav items swaps the visible view, no reload.
-- **Modals:** centered, capped at `max-height: 85vh` with internal scroll; **Esc** closes any modal (and
-  the Timeline info popover); outside-click closes.
+- **Modals:** centered, capped at `max-height: 85vh` with internal scroll; only the Cancel/Save/Delete
+  buttons close a modal — **Esc** and outside-click are disabled to avoid accidental data loss (Esc still
+  closes the Timeline info popover).
 - **Inline editing:** clicking a feature name anywhere opens the edit modal.
 - **Persistence:** every save/delete writes to `localStorage` instantly (no explicit save button) and
   syncs to the cloud when configured.

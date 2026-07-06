@@ -1723,14 +1723,6 @@ document.getElementById('tl-tag-filter').addEventListener('change', renderTimeli
 
 document.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
-  // close the topmost open modal (later in DOM paints on top — e.g. confirm over edit modal)
-  const openModals = document.querySelectorAll('.modal-overlay.open');
-  if (openModals.length) {
-    const top = openModals[openModals.length - 1];
-    top.classList.remove('open');
-    if (top.id === 'confirm-overlay') confirmCb = null;
-    return;
-  }
   const pop = document.getElementById('tl-info-popover');
   if (pop && !pop.hasAttribute('hidden')) {
     pop.setAttribute('hidden','');
@@ -1857,7 +1849,6 @@ function setDayType(type) {
 document.querySelectorAll('.day-type-option').forEach(o => o.addEventListener('click', () => setDayType(o.dataset.type)));
 function closeDayModal() { document.getElementById('day-modal-overlay').classList.remove('open'); }
 document.getElementById('day-modal-cancel').addEventListener('click', closeDayModal);
-document.getElementById('day-modal-overlay').addEventListener('click', e => { if (e.target === document.getElementById('day-modal-overlay')) closeDayModal(); });
 
 document.getElementById('day-modal-save').addEventListener('click', () => {
   if (dayType === 'working') saveWorkingDay(); else saveHolidayRange();
@@ -2021,7 +2012,6 @@ function openEdit(id) {
 }
 
 function closeModal() { document.getElementById('modal-overlay').classList.remove('open'); }
-document.getElementById('modal-overlay').addEventListener('click', e => { if (e.target===document.getElementById('modal-overlay')) closeModal(); });
 document.getElementById('modal-cancel').addEventListener('click', closeModal);
 
 function setStatus(val) {
@@ -2160,7 +2150,6 @@ function confirmDialog(msg, onYes, okLabel = 'Delete') {
 }
 function closeConfirm() { confirmCb = null; document.getElementById('confirm-overlay').classList.remove('open'); }
 document.getElementById('confirm-cancel').addEventListener('click', closeConfirm);
-document.getElementById('confirm-overlay').addEventListener('click', e => { if (e.target === document.getElementById('confirm-overlay')) closeConfirm(); });
 document.getElementById('confirm-ok').addEventListener('click', () => { const cb = confirmCb; closeConfirm(); if (cb) cb(); });
 
 // ── TOAST (with undo) ────────────────────────────────────

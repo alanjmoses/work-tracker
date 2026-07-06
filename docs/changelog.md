@@ -2,6 +2,13 @@
 
 Dated record of notable changes. Most recent first.
 
+## 2026-07-06 — Modals no longer dismiss on Esc / outside-click
+
+- Removed the outside-click handlers on all three modal overlays (Add/Edit Feature, Day, Confirm) and
+  removed the modal-closing branch of the global Escape handler. Modals now only close via their
+  Cancel/Save/Delete buttons — prevents accidental loss of in-progress edits from a stray click or Esc.
+  Esc still closes the Timeline info popover.
+
 ## 2026-07-01 — Resume features by name + jump-to-today
 
 - **Add Feature name autocomplete:** the name field is now backed by a `<datalist>` of every existing

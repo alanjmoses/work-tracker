@@ -655,7 +655,8 @@ const DAY_W = 96; // px per weekday column
 function load(key, fallback) { try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; } }
 function rawSave(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
 // every save writes the local cache synchronously, then schedules a debounced push to the cloud
-function save(key, val) { rawSave(key, val); schedulePush(); }
+function save(key, val) { rawSave(key, val); markLocalEdited(); schedulePush(); }
+function markLocalEdited() { try { localStorage.setItem('wt_local_edited_at', new Date().toISOString()); } catch {} }
 function getFeatures() { return load('wt_features', []); }
 function saveFeatures(f) { save('wt_features', f); }
 function getTags() { const s = load('wt_tags', null); if (!s) { save('wt_tags', DEFAULT_TAGS); return DEFAULT_TAGS; } return s; }
@@ -673,7 +674,7 @@ const sb = SYNC_ENABLED ? window.supabase.createClient(SUPABASE_URL, SUPABASE_AN
 let currentUser = null;       // Supabase auth user, or null
 let booted = false;           // bootData() has run for this session
 let appliedUpdatedAt = null;  // updated_at of the snapshot currently reflected locally
-let pushTimer = null, pushFailed = false;
+let pushTimer = null, pushFailed = false, pendingPush = false;
 
 function localSnapshot() { return { features: getFeatures(), tags: getTags(), holidays: getHolidays() }; }
 function setSyncStatus(s) {
@@ -705,7 +706,9 @@ function backupLocalIfNeeded(incoming) {
 }
 // write a cloud snapshot into the local cache WITHOUT triggering a push back.
 // returns true if a local backup was made (i.e. local diverged from cloud).
-function adoptSnapshot(data) {
+// updatedAt (the cloud row's timestamp) is stamped as this device's local-edit time too, so a later
+// boot never mistakes "just adopted cloud" for "has newer unsynced local edits".
+function adoptSnapshot(data, updatedAt) {
   if (!data) return false;
   const backedUp = backupLocalIfNeeded(data);
   if (Array.isArray(data.features)) rawSave('wt_features', data.features);
@@ -713,29 +716,37 @@ function adoptSnapshot(data) {
   if (data.holidays && typeof data.holidays === 'object') rawSave('wt_holidays', data.holidays);
   // cloud data is authoritative — don't re-run seeds/backfills on it (mirrors the import path)
   ONE_TIME_FLAGS.forEach(k => localStorage.setItem(k, '1'));
+  if (updatedAt) { try { localStorage.setItem('wt_local_edited_at', updatedAt); } catch {} }
   return backedUp;
 }
 function schedulePush() {
   if (!SYNC_ENABLED || !currentUser) return;
   setSyncStatus('saving');
+  pendingPush = true;
   clearTimeout(pushTimer);
   pushTimer = setTimeout(pushNow, 1000);
 }
 async function pushNow() {
   if (!SYNC_ENABLED || !currentUser) return;
   clearTimeout(pushTimer);
+  pendingPush = false;
   const stamp = new Date().toISOString();
   const { error } = await sb.from('app_state').upsert({ user_id: currentUser.id, data: localSnapshot(), updated_at: stamp });
   if (error) { pushFailed = true; setSyncStatus('offline'); }
   else { pushFailed = false; appliedUpdatedAt = stamp; setSyncStatus('saved'); }
 }
+// flush a pending debounced push immediately when the tab is about to go away — shrinks (but doesn't
+// eliminate) the window where a reload could race an unsynced edit. The bootData() merge below is what
+// actually makes that race safe even if this doesn't win the race.
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && pendingPush) pushNow(); });
+window.addEventListener('pagehide', () => { if (pendingPush) pushNow(); });
 async function pullRemote(force) {
   if (!SYNC_ENABLED || !currentUser) return;
   if (pushFailed) pushNow();   // also retry a failed push when we regain focus
   const { data, error } = await sb.from('app_state').select('data, updated_at').eq('user_id', currentUser.id).maybeSingle();
   if (error || !data) return;
   if (!force && appliedUpdatedAt && data.updated_at <= appliedUpdatedAt) return;
-  adoptSnapshot(data.data); appliedUpdatedAt = data.updated_at; renderView();
+  adoptSnapshot(data.data, data.updated_at); appliedUpdatedAt = data.updated_at; renderView();
 }
 let realtimeChan = null;
 function subscribeRealtime() {
@@ -744,29 +755,33 @@ function subscribeRealtime() {
     .on('postgres_changes', { event: '*', schema: 'public', table: 'app_state', filter: 'user_id=eq.' + currentUser.id }, payload => {
       const row = payload.new;
       if (row && row.updated_at && (!appliedUpdatedAt || row.updated_at > appliedUpdatedAt)) {
-        adoptSnapshot(row.data); appliedUpdatedAt = row.updated_at; renderView();
+        adoptSnapshot(row.data, row.updated_at); appliedUpdatedAt = row.updated_at; renderView();
       }
     }).subscribe();
 }
 
-// decide cloud-vs-local on first load (no data loss), then run the normal INIT
+// decide cloud-vs-local on first load (no data loss), then run the normal INIT.
+// the winner is whoever was edited more recently (wt_local_edited_at vs the cloud row's updated_at) —
+// NOT feature count, which stays unchanged when a block is added/removed inside an existing feature and
+// so would wrongly call it a tie and discard genuine unsynced local edits (e.g. a reload racing the
+// debounced push in schedulePush()).
 async function bootData() {
   if (SYNC_ENABLED && currentUser) {
     try {
       const { data } = await sb.from('app_state').select('data, updated_at').eq('user_id', currentUser.id).maybeSingle();
-      const cloudFeatures = data && data.data && data.data.features;
-      const cloudHas = Array.isArray(cloudFeatures) && cloudFeatures.length > 0;
+      const cloudHas = data && data.data && Array.isArray(data.data.features) && data.data.features.length > 0;
       const localHas = getFeatures().length > 0;
+      const localEditedAt = localStorage.getItem('wt_local_edited_at') || '';
       if (!data || !cloudHas) {
         await pushNow();                              // no/empty cloud row → seed it from this browser
       } else if (!localHas) {
-        adoptSnapshot(data.data); appliedUpdatedAt = data.updated_at;          // fresh device → take cloud
-      } else if (cloudFeatures.length >= getFeatures().length) {
-        const backedUp = adoptSnapshot(data.data); appliedUpdatedAt = data.updated_at;   // both have data → keep cloud
-        if (backedUp) showToast('Loaded cloud data — your differing local copy was backed up');  // silent on a normal refresh (local == cloud)
-      } else {
-        backupLocalIfNeeded(); await pushNow();       // this browser has more → keep it, push up
+        adoptSnapshot(data.data, data.updated_at); appliedUpdatedAt = data.updated_at;          // fresh device → take cloud
+      } else if (localEditedAt > data.updated_at) {
+        backupLocalIfNeeded(data.data); await pushNow();       // local has unsynced edits newer than cloud → keep it, push up
         showToast("Kept this browser's data — pushed to cloud");
+      } else {
+        const backedUp = adoptSnapshot(data.data, data.updated_at); appliedUpdatedAt = data.updated_at;   // cloud is at least as recent → keep cloud
+        if (backedUp) showToast('Loaded cloud data — your differing local copy was backed up');  // silent on a normal refresh (local == cloud)
       }
     } catch (e) { setSyncStatus('offline'); }
   }

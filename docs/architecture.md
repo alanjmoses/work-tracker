@@ -26,8 +26,9 @@ The app still works as a pure local app when sync is unconfigured.
 ## Data storage & cloud sync
 
 **Local cache (always):** state lives in `localStorage` under `wt_features`, `wt_tags`,
-`wt_holidays`, plus one-time migration flags (`ONE_TIME_FLAGS`). `load()`/`rawSave()` are the
-low-level accessors; `save()` writes the cache synchronously **and** schedules a debounced cloud push.
+`wt_holidays`, plus one-time migration flags (`ONE_TIME_FLAGS`) and `wt_local_edited_at` (stamped on
+every local mutation — see below). `load()`/`rawSave()` are the low-level accessors; `save()` writes
+the cache synchronously, stamps `wt_local_edited_at`, **and** schedules a debounced cloud push.
 
 **Cloud (Supabase, optional):** the source of truth when configured.
 
@@ -43,17 +44,26 @@ low-level accessors; `save()` writes the cache synchronously **and** schedules a
   (`seedIfEmpty → migrateFeatures → … → renderView`). Adopting cloud data sets `ONE_TIME_FLAGS` so
   seeds/backfills never re-run on authoritative data (mirrors the import path).
 - **Push:** `save()` → `schedulePush()` (~1s debounce) → `pushNow()` upserts the snapshot.
-  `#sync-status` shows `Saving… / Saved ✓ / Offline`.
+  `#sync-status` shows `Saving… / Saved ✓ / Offline`. A pending push is also flushed immediately on
+  `visibilitychange` (tab hidden) / `pagehide`, to shrink the reload race described below.
 - **Freshness:** Supabase Realtime subscription on the user's row + a pull on `window` focus; existing
-  cross-tab `storage` listener retained. Conflict policy: last-write-wins by `updated_at` (single user).
+  cross-tab `storage` listener retained. Conflict policy: **most-recently-edited wins**, compared by
+  timestamp (see below) — not last-write-wins-by-arrival, since single-user multi-device edits can race.
 
 ### No-data-loss guarantees
 
-- `bootData` never blindly clobbers: **cloud-null** pushes local up; **fresh device** (local empty)
-  adopts cloud; **both non-empty** keeps the larger feature set and backs up the other.
+- `bootData` never blindly clobbers, and the winner is decided by **recency, not feature count**:
+  **cloud-null** pushes local up; **fresh device** (local empty) adopts cloud; **both non-empty** compares
+  `wt_local_edited_at` (stamped by every `save()`) against the cloud row's `updated_at` — whichever is
+  newer wins. This matters because adding/removing a block inside an *existing* feature doesn't change
+  the feature count, so a count-based check would wrongly call it a tie; a reload racing the 1s debounced
+  push would then silently discard the unsynced edit. Timestamp comparison keeps local intact in that case
+  and re-pushes it.
 - `adoptSnapshot` stashes a `wt_local_backup_<ts>` copy before overwriting local — but **only when local
   genuinely differs** from the incoming cloud snapshot, compared with `stableStringify` (key-order-insensitive,
-  because Supabase `jsonb` reorders keys). Capped at the **5** most recent.
+  because Supabase `jsonb` reorders keys). Capped at the **5** most recent. Adopting cloud also stamps
+  `wt_local_edited_at` to the cloud row's `updated_at`, so a later boot doesn't mistake "just adopted cloud"
+  for "has newer unsynced local edits".
 - Routine refreshes are **silent**; the "Loaded from cloud" toast only fires when a real divergence was
   backed up (`adoptSnapshot` returns whether it wrote a backup).
 - The JSON export/import remains a manual, fully-reversible backup path.

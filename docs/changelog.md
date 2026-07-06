@@ -2,6 +2,22 @@
 
 Dated record of notable changes. Most recent first.
 
+## 2026-07-06 — Fix cloud-sync data loss on reload racing an edit
+
+- **Bug:** `bootData()` decided local-vs-cloud by comparing feature *count*, which stays unchanged when a
+  block is added/removed inside an existing feature. A reload within the 1s debounced-push window (e.g.
+  refreshing the page right after an edit) would see cloud and local as "equal" and silently adopt the
+  stale cloud snapshot, reverting the just-made edit.
+- **Fix:** track `wt_local_edited_at` (stamped on every `save()`) and compare it against the cloud row's
+  `updated_at` instead of feature count — local now wins whenever it's genuinely more recent, regardless
+  of whether the feature count changed. `adoptSnapshot` also stamps `wt_local_edited_at` to the adopted
+  cloud timestamp so later boots don't misread "just adopted cloud" as "newer local edits."
+- Added a `visibilitychange`/`pagehide` flush of any pending debounced push, to shrink (not rely on) the
+  race window.
+- Also added a custom `.github/workflows/pages.yml` (upload-pages-artifact + deploy-pages, serialized via
+  a `concurrency` group) to replace the legacy "deploy from branch" auto-workflow, whose opaque deploy
+  step had failed twice with no visible logs.
+
 ## 2026-07-06 — Modals no longer dismiss on Esc / outside-click
 
 - Removed the outside-click handlers on all three modal overlays (Add/Edit Feature, Day, Confirm) and
